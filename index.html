@@ -1,106 +1,120 @@
+<!DOCTYPE html>
 <html>
-	<head>
-		<link rel="stylesheet" type="text/css" href="css1.css">
-		<script src="mootools-core-1.5.1-full-nocompat.js"></script>
-		<script>
-		function myinit(){
+<head lang="en">
+    <meta charset="UTF-8">
+    <script src="mootools-core-1.5.1-full-nocompat.js"></script>
+    <script>
+        function changetext1(){
 
-			var myButtons = ["left1", "left2", "left3", "left4", "left5"];
+            var myCats = ["pipelines", "portfolio", "consultancy", "downloads", "home", "contact", "about"];
 
-			var myText1 = {};
-			myText1["left1"] = "<pre>Blablabla genomics's mission is blabla, blabla located in Montreal, QC.\nOur work focus on environmental genomics/Microbial ecology genomics/bioinformatics (Microbiome, metagenomics, metatranscriptomics, genome assembly, etc.) project outsourcing. blabla...</pre>";
-			myText1["left2"] = "<pre>Projects/products pipelines we currently have in 'production' state are : \n1) 16S/18S/ITS rRNA amplicons.\n2) Metagenomics (assembly + binning).\n3) metatransciptomics.\n4) bacterial whole genomics assembly.\nFor each project, we take care of blabla. \nWe provide in depth results/statistics (diversity metrics, metabolic pathways, gene annotation, etc.)\n<pre>";
-			myText1["left3"] = "left3";
-			myText1["left4"] = "left4";
-			myText1["left5"] = "left5";
+            var myText1 = {};
 
-			var arrayLength = myButtons.length;
+            myText1["pipelines"]   = "<pre>Projects/products pipelines I currently have in production : \n1) 16S/18S/ITS rRNA amplicons.\n2) Metagenomics (assembly + binning).\n3) metatransciptomics (Projected).\n4) bacterial whole genome assembly (assembly, gene prediction + annotation).\n<pre>";
+            myText1["portfolio"]   = "<pre>Besides bioinformatics pipeline have a look at these visualization tools and plots. (in development)</pre>";
+            myText1["consultancy"] = "<pre>Contact me! - <a href='https://ca.linkedin.com/pub/julien-tremblay/35/888/32b'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a> </pre>";
+            myText1["downloads"]   = "<pre>Various downloads will be placed here...</pre>";
+            myText1["home"]        = "<pre>I am a bioinformatics scientist whose interests are in genomics R&D and in \ndeveloping end-to-end bioinformatics pipelines geared for environmental genomics data.\n <a href='https://ca.linkedin.com/pub/julien-tremblay/35/888/32b'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a> <a href='https://scholar.google.ca/citations?user=sbA3Bh8AAAAJ&hl=en&oi=ao'><img src='images/gscholar.png' alt='gscholar' width='42' height='42'></a> <a href='https://twitter.com/julio_514'><img src='images/twitter.png' alt='twitter' width='42' height='42'></a> <a href='www.environmentalgenomics.wordpresscom'><img src='images/wordpress.png' alt='twitter' width='42' height='42'></a>  <a href='https://github.com/jtremblay'><img src='images/github.png' alt='github' width='82' height='42'></a> </pre>";
+            myText1["contact"]     = "<pre>Contact me! - <a href='https://ca.linkedin.com/pub/julien-tremblay/35/888/32b'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a> </pre>";
+            myText1["about"]       = "<pre><a href='https://ca.linkedin.com/pub/julien-tremblay/35/888/32b'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a> <a href='https://scholar.google.ca/citations?user=sbA3Bh8AAAAJ&hl=en&oi=ao'><img src='images/gscholar.png' alt='gscholar' width='42' height='42'></a> <a href='https://twitter.com/julio_514'><img src='images/twitter.png' alt='twitter' width='42' height='42'></a> <a href='www.environmentalgenomics.com'><img src='images/wordpress.png' alt='twitter' width='42' height='42'></a>  <a href='https://github.com/jtremblay'><img src='images/github.png' alt='github' width='82' height='42'></a> </pre>";
 
-			for(var i=0; i<arrayLength; i++) {
-				var currVar = myButtons[i];
-				//var currContent = myContent[i];
-				//var currText = myText1[i];
+            for(var i=0; i<myCats.length; i++) {
 
-				var el = $(currVar);
+                //var currVar = "pipeline";
+                var currVar = myCats[i];
 
+                $(currVar).addEvents({
+                    click: function () {
+                        var divid = this.id;
+                        $('id-content').style.opacity = 0;
+                        $('id-content').innerHTML = myText1[divid];
+                        $('id-content').set('tween', {transition: Fx.Transitions.linear, duration: 1500});
+                        $('id-content').tween('opacity', [0, 1]);
+                        //window.alert("clicked...");
+                    }
+                });
+            }
+            /*$('pipeline').addEvent('click', function() {
+                alert(this.options.message);
+            }.bind(this));*/
+            //}
+        }
+        window.addEvent('domready', changetext1);
 
-				$(currVar).addEvents({
-					mouseenter: function(){
+    </script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <title>Microbiome lounge</title>
+    <div class="ch-header">
+        <li><div id="home"><h3>Home</h3></div></li>
+        <li><div id="about"><h3>About me</h3></div></li>
+        <li><div id="contact"><h3>Contact me</h3></div></li>
+    </div>
+</head>
+<body>
+<div class="container">
+    <ul class="ch-grid">
+        <li>
+            <div class="ch-item ch-img-1">
+                <div class="ch-info-wrap3">
+                    <div class="ch-info3" id="pipelines">
+                        <div class="ch-info-front3 ch-img-1"><h3>Pipelines</h3></div>
+                        <div class="ch-info-back3">
+                            <h4>Pipelines</h4>
+                            <p><a href="http://drbl.in/ewUW"></a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </li>
+        <li>
+            <div class="ch-item">
+                <div class="ch-info">
+                    <div class="ch-info-front ch-img-2"><h3>Portfolio</h3></div>
+                    <div class="ch-info-back" id="portfolio">
+                        <h4>Portfolio</h4>
+                        <p><a href="http://github.com/jtremblay"></a></p>
+                    </div>
+                </div>
+            </div>
+        </li>
+        <li>
+            <div class="ch-item ch-img-1">
+                <div class="ch-info-wrap3">
+                    <div class="ch-info3" id="consultancy">
+                        <div class="ch-info-front3 ch-img-3"><h3>Consultancy</h3></div>
+                        <div class="ch-info-back3a">
+                            <h4>Consultancy</h4>
+                            <p><a href="http://github.com/jtremblay"></a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </li>
+        <li>
+            <div class="ch-item">
+                <div class="ch-info">
+                    <div class="ch-info-front ch-img-4"><h3>Downloads</h3></div>
+                    <div class="ch-info-back" id="downloads">
+                        <h4>Downloads</h4>
+                        <p><a href="http://github.com/jtremblay"></a></p>
+                    </div>
+                </div>
+            </div>
+        </li>
+    </ul>
+    <div class="ch-midpanel">
+        <div id="id-content"><h3>I am a bioinformatics scientist whose interests are in genomics R&D and in </h3>
+                             <h3>developing end-to-end bioinformatics pipelines geared for environmental genomics data</h3>
+                            <a href='https://ca.linkedin.com/pub/julien-tremblay/35/888/32b'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a>
+                            <a href='https://scholar.google.ca/citations?user=sbA3Bh8AAAAJ&hl=en&oi=ao'><img src='images/gscholar.png' alt='gscholar' width='42' height='42'></a>
+                            <a href='https://twitter.com/julio_514'><img src='images/twitter.png' alt='twitter' width='42' height='42'></a>
+                            <a href='www.environmentalgenomics.wordpress.com'><img src='images/wordpress.png' alt='wordpress' width='42' height='42'></a>
+                            <a href='https://github.com/jtremblay'><img src='images/github.png' alt='github' width='82' height='42'></a>
+        </div>
 
-				    	this.morph({
-							'opacity': 0.5
-					 	});
-					 	this.set('tween', {transition: Fx.Transitions.Bounce.easeOut, duration:500});
-						this.tween('margin-left', 25);
-					},
-					mouseleave: function(){
-
-				    	this.morph({
-				    		opacity: 1.0
-						});
-						this.set('tween', {transition: Fx.Transitions.Bounce.easeOut, duration: 500});
-						this.tween('margin-left', 0);
-					},
-					click: function(){
-						var divid = this.id;
-						$('content').style.opacity = 0;
-						$('content').innerHTML = myText1[divid];
-						$('content').set('tween', {transition: Fx.Transitions.linear, duration: 1500});
-						$('content').tween('opacity', [0,1]);
-					}
-  				});
-  			}
-  		}
-
-	 	window.addEvent('domready', myinit);
-
-		</script>
-
-
-		<title>Microbiome - home</title>
-	</head>
-	<body>
-		<div class="container">
-			<div class="header">
-				<IMG class="displayed" src="images/logo.png"></IMG>
-			</div>
-			<div class="leftpanel">
-				<div class="clear"></div>
-
-		  		<div id="left1">
-
-		  		</div>
-
-		  		<div id="left2">
-
-		  		</div>
-
-		  		<div id="left3">
-
-		  		</div>
-
-		  		<div id="left4">
-
-		  		</div>
-		  		<div id="left5">
-
-		  		</div>
-
-		  		<div class="clear"></div>
-
-				</div>
-			</div>
-			<div id="content">
-
-			</div>
-
-		</div>
-
-
-	</body>
-	<div class="footer">
-												<IMG class="displayed" src="images/copyright.png"></IMG>
-						</div>
-
+    </div>
+</body>
+<div class="ch-footer">
+    <li><h3>Copyright J.Tremblay 2015</h3></li>
+</div>
 </html>
-
