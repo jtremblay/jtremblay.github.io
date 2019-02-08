@@ -1660,6 +1660,10 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
     src: url('../fonts/glyphicons-halflings-regular.eot');
     src: url('../fonts/glyphicons-halflings-regular.eot?#iefix') format('embedded-opentype'), url('../fonts/glyphicons-halflings-regular.woff') format('woff'), url('../fonts/glyphicons-halflings-regular.ttf') format('truetype'), url('../fonts/glyphicons-halflings-regular.svg#glyphicons-halflingsregular') format('svg');
 }
+@font-face {
+    font-family: 'Sigmar One';
+    src: url('/fonts/Sigmar_One/SigmarOne-Regular.ttf');
+}
 .glyphicon {
     position: relative;
     top: 1px;
