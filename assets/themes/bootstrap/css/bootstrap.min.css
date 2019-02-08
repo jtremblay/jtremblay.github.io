@@ -209,8 +209,7 @@ html {
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 body {
-    /*font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;*/
-    font-family: "Sigmar_One";
+    /*font-family: "Sigmar_One";*/
     font-size: 14px;
     line-height: 1.428571429;
     color: #333;
@@ -274,7 +273,16 @@ hr {
     clip: rect(0, 0, 0, 0);
     border: 0;
 }
-h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+
+h1, .h1 {
+    /*font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;*/
+    font-family: "Sigmar One";
+    font-weight: 500;
+    line-height: 1.1;
+    color: inherit;
+}
+
+h2, h3, h4, h5, h6, .h2, .h3, .h4, .h5, .h6 {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-weight: 500;
     line-height: 1.1;
