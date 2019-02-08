@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <title>Pipelines</title>
+    <title>AmpliconTagger</title>
     
     <meta name="author" content="Name Lastname">
 
@@ -181,19 +181,15 @@
       <h2 id="sample-posts">Pipelines</h2>
 
 
-      <p>These are the bioinformatics pipelines I maintain and develop.</p>
+      <p>AmpliconTagger home page.</p>
 
       <ul class="posts">
   
-          <li><span>rRNA amplicons (16S/18S/ITS)</span>  Starting from amplicon reads, this pipeline follows the procedures of our rRNA paper <a href="http://journal.frontiersin.org/article/10.3389/fmicb.2015.00771/abstract">Tremblay et al., 2015.</a> See our <a href="http://jtremblay.github.io/amplicontagger.html"> amplicon pipeline project page </a> and <a href="http://jtremblay.github.io/PipelineViewer/amplicontagger.html"> Have a look in my Pipeline Viewer tool.</a></li>
-         <li><span>Assembly (Metatranscriptomics and/or Metagenomics)</span> Starting from shotgun DNA reads, this pipeline assemble, annotates (following JGI SOPs) and assess differential abundance of genes and contigs.</a></li>
-         <li><span>Metatranscriptomics</span> Starting from shotgun RNA reads, this pipeline will map reads against annotated reference and tests for differential gene expression based on experimental designs.</a></li>
-         <li><span>Whole genome assembly (PacBio)</span> Starting from long PacBio reads, this pipeline will generate a genome assembly. Note that PacBio genome assembly usually achieves ~99.999% accuracy and completness for bacterial genomes.</a></li>
+         <li><span>The AmpliconTagger project holds in two code repositories: <a href="https://bitbucket.org/jtremblay514/nrc_pipeline_public/src/1.0/"> one holding the code of the pipeline wrapper </a><a href="https://bitbucket.org/jtremblay514/nrc_tools_public/src/1.0/"> one for the scripts it relies on</a>.</span></li>
+         <li><span>An additional repository contains the <a href="https://bitbucket.org/jtremblay514/nrc_resources_public/src/1.0/"> third software packages module install scripts</a>.</span></li>
+         <li><span>Preprint of the paper coming soon.</span></li>
       </ul>
-
-   
-      <p>We need metadata in order to run these pipelines. For the 16S/18S/ITS amplicon pipeline, we need what we call a mapping file <a href="http://jtremblay.github.io/files/mapping_file.tsv"> of which an example can be found here</a>. It is a simple tab delimited file in which the first column is your unique sample ID and the following columns are variable groups. Each subsequent columns contains variables related to that column. For metagenomics and metatranscriptomics, we need a mapping file and a design file <a href="http://jtremblay.github.io/files/design_file.tsv">(example here)</a>. In the design file, the first column represent your unique sample IDs and the following columns represent the design for which you want to perform differential DNA or RNA abundance/expression analysis. Each of the design columns has to be populated with 0, 1 or 2. Samples having 0s will be left out for the current design (i.e. current column). Samples labeled with 1s will be considered controls and samples labeled with 2s will be considered as treatments. For both these files, you can have as much columns (variables/variable groups) as you see fit. These files can easily be created or edited with Excel or similar software.</p>
-
+ 
    </div>
 </div>
 
