@@ -209,7 +209,8 @@ html {
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 body {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    /*font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;*/
+    font-family: "Sigmar_One";
     font-size: 14px;
     line-height: 1.428571429;
     color: #333;
@@ -1651,6 +1652,10 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
     font-family: 'Glyphicons Halflings';
     src: url('../fonts/glyphicons-halflings-regular.eot');
     src: url('../fonts/glyphicons-halflings-regular.eot?#iefix') format('embedded-opentype'), url('../fonts/glyphicons-halflings-regular.woff') format('woff'), url('../fonts/glyphicons-halflings-regular.ttf') format('truetype'), url('../fonts/glyphicons-halflings-regular.svg#glyphicons-halflingsregular') format('svg');
+}
+@font-face {
+    font-family: 'Sigmar One';
+    src: url('/fonts/Sigmar_One/SigmarOne-Regular.ttf');
 }
 .glyphicon {
     position: relative;
