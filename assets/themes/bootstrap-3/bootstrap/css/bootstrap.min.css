@@ -19,10 +19,10 @@ html {
 
 body {
     margin: 0;
-    background-image: -webkit-linear-gradient(top, #fff 0, #f8f8f8 100%);
-    background-image: linear-gradient(to bottom, #fff 0, #f8f8f8 100%);
-    /*background-image: url(/images/bg.jpg);
-    background-repeat: repeat-x repeat-y;*/
+    /*background-image: -webkit-linear-gradient(top, #fff 0, #f8f8f8 100%);
+    background-image: linear-gradient(to bottom, #fff 0, #f8f8f8 100%);*/
+    background-image: url(/images/bg_white.png);
+    background-repeat: repeat-x repeat-y;
 }
 
 a {
