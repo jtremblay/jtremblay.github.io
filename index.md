@@ -13,6 +13,7 @@ tagline:
     <a href='https://twitter.com/julio_514'><img src='images/twitter.png' alt='twitter' width='42' height='42'></a>
     <!--<a href='www.environmentalgenomics.com'><img src='images/wordpress.png' alt='twitter' width='42' height='42'></a>-->
     <a href='https://github.com/jtremblay'><img src='images/github.png' alt='github' width='120' height='42'></a> </p>
+    <a href='https://bitbucket.org/jtremblay514/'><img src='images/bitbucket_icon.png' alt='bbucket' width='42' height='42'></a>
 
 
     
