@@ -276,7 +276,7 @@ hr {
 
 h1, h2, .h1, .h2 {
     /*font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;*/
-    font-family: "Sigmar One";
+    font-family: "Archivo Black";
     font-weight: 500;
     line-height: 1.1;
     color: inherit;
@@ -1670,6 +1670,10 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 @font-face {
     font-family: 'Sigmar One';
     src: url('/fonts/Sigmar_One/SigmarOne-Regular.ttf');
+}
+@font-face {
+    font-family: 'Archivo Black';
+    src: url('/fonts/ArchivoBlack/ArchivoBlack-Regular.ttf');
 }
 .glyphicon {
     position: relative;
