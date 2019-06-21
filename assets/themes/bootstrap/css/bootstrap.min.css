@@ -294,6 +294,14 @@ h7, .h7 {
     line-height: 1.1;
     color: white;
 }
+h8, .h8 {
+    font-family: 'Archivo Black';
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1.1;
+    color: blue;
+    display: inline;
+}
 h1 small, h2 small, h3 small, h4 small, h5 small, h6 small, .h1 small, .h2 small, .h3 small, .h4 small, .h5 small, .h6 small, h1 .small, h2 .small, h3 .small, h4 .small, h5 .small, h6 .small, .h1 .small, .h2 .small, .h3 .small, .h4 .small, .h5 .small, .h6 .small {
     font-weight: normal;
     line-height: 1;
