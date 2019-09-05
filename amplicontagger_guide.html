@@ -9,9 +9,8 @@
 <meta name="generator" content="pandoc" />
 
 
-<meta name="author" content="Julien Tremblay" />
+<meta name="author" content="Written by Julien Tremblay" />
 
-<meta name="date" content="2019-06-14" />
 
 <title>AmpliconTagger User guide</title>
 
@@ -192,8 +191,8 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">AmpliconTagger User guide</h1>
-<h4 class="author">Julien Tremblay</h4>
-<h4 class="date">June 14, 2019</h4>
+<h4 class="author">Written by Julien Tremblay</h4>
+<h4 class="date">September 4, 2019</h4>
 
 </div>
 
@@ -202,14 +201,16 @@ $(document).ready(function () {
 @import url('https://fonts.googleapis.com/css?family=Days+One|Prompt|Roboto&display=swap');
 </style>
 <p>This document is divided into five main sections:<br />
-1) General information about the AmpliconTagger pipeline and how jobs are generated<br />
-2) Workflow walkthrough<br />
-3) Smart restart mechanism<br />
-4) End results<br />
-5) Note on preprocessing PacBio raw reads.</p>
+<a href="#section1">1) General information about the AmpliconTagger pipeline and how jobs are generated</a><br />
+<a href="#section2">2) Workflow walkthrough</a><br />
+<a href="#section3">3) Smart restart mechanism</a><br />
+<a href="#section4">4) End results</a><br />
+<a href="#section5">5) Note on preprocessing PacBio raw reads</a><br />
+<a href="#section6">6) Note the job output folder where standard output and standard error of each job are written</a><br />
+<a href="#section7">7) Integrating more options in a given bioinformatics package</a></p>
 <p>All files being referred to in this document can be found in the companion docker image: <a href="https://cloud.docker.com/u/julio514/repository/docker/julio514/centos" class="uri">https://cloud.docker.com/u/julio514/repository/docker/julio514/centos</a><br />
 The first step should be to install this image on your computer.</p>
-<div id="getting-started" class="section level1">
+<div id="section1" class="section level1">
 <h1>1- Getting started</h1>
 <div id="global-overview" class="section level2">
 <h2>Global overview</h2>
@@ -334,7 +335,7 @@ bio/microbial_ecology.py</code></pre>
 </div>
 <div id="the-.ini-file." class="section level3">
 <h3>The .ini file.</h3>
-<p>The .ini file, in our case, <code>AmpliconTagger.ini</code> contains job scheduler, software, database paths and third packages specific parameters that will be used at each step of the pipeline. The first few lines of the .ini file contain general definitions mainly related to the job scheduler:</p>
+<p>The .ini file, in our case, <code>AmpliconTagger.ini</code> contains job scheduler, software, database paths and third party packages specific parameters that will be used at each step of the pipeline. The first few lines of the .ini file contain general definitions mainly related to the job scheduler:</p>
 <pre><code>[DEFAULT]
 cluster_submit_cmd=sbatch
 cluster_walltime=-t 12:00:0
@@ -381,18 +382,22 @@ module_picrust=nrc/picrust/1.1.0
 module_deblur=nrc/deblur/1.0.4
 module_vsearch=nrc/vsearch/2.7.1</code></pre>
 <p>For more information on modules, the reader is invited to consult references on Environment Modules (<a href="http://modules.sourceforge.net/" class="uri">http://modules.sourceforge.net/</a>).</p>
-<p>Next are general (but critical) parameters like sequencing reads configuration, file paths of amplification primers files and which organisms to keep in downstream OTU/ASV tables:</p>
-<pre><code># accepted values for library_type are the following: ex, nc1, nc2. ex = paired-end reads to be merged using their overlapping part prior to clustering/ASV generation. nc1 = will only use left forward reads (i.e. R1). nc1 = will only use right reverse reads (i.e. R2).
-# If ex: output files will be written in the ./amplicontagger/assembled/ directory
+<p>Next are general (but critical) parameters like sequencing reads configuration, file paths of amplification primers files and which organisms to keep in downstream OTU/ASV tables. Here we wish to state that we are aware that ASV generation (deblur, dada2) differs from clustering. However, in the context of the pipeline structure, ASV generation methods are part of the clustering step.</p>
+<pre><code># accepted values for library_type are the following: ex, nc1, nc2 and nc1nc2. ex : paired-end reads to be merged using their overlapping part prior to clustering/ASV generation. nc1 : will only use left forward reads (i.e. R1). nc1 : will only use right reverse reads (i.e. R2). nc1nc2 will process R1 and R2 reads separately with no merging. Currently only used when clustering_method is set to dada2.
+
+# If ex: output files will be written in the ./amplicontagger/reads_12/ directory. The ex parameter can be used in combination with dnaclust, vsearch and deblur for OTU/ASV generation method (clustering_method=&lt;string&gt; in the .ini file as specified below).
 # If nc1: output files will be written in the ./amplicontagger/reads_1/ directory
-# If nc2: output files will be written in the ./amplicontagger/reads_2/ directory
+# If nc2: output files will be written in the ./amplicontagger/reads_2/ directory. nc2 is in practice very rarely used, mostly for debugging purpose or in the situation were forward reads (reads 1) are unusable because of low quality or other problem(s).
+# If nc1nc2: output files will be written in the ./amplicontagger/reads_12/ directory. The nc1nc2 parameter should only be specified when using dada2 for ASV generation method (clustering_method=dada2 in the .ini file as specified below). DADA2 takes fwd and rev reads separately and does the merging itself. 
+
+# In the current example, we will use vsearch on assembled/extended fragments, hence the library_type=ex and clustering_method=vsearch.
 library_type=ex
 mapping_file=./mapping_file.tsv
 tmp_dir=$TMPDIR
 forward_primer=$INSTALL_HOME/databases/primers/V4/V4_F.fasta
 reverse_primer=$INSTALL_HOME/databases/primers/V4/V4_R.fasta
 
-# organism_type can be one of the following: bacteriaArchaea, bacteria, archaea, fungi or everything
+# organism_type can be one of the following: bacteriaArchaea, bacteria, archaea, fungi, eukaryotes or everything
 organism_type=bacteriaArchaea
 keep_chloroplast=no
 keep_mitochondria=no</code></pre>
@@ -414,26 +419,29 @@ chimeras=$INSTALL_HOME/databases/fasta/broad/gold.fa</code></pre>
 # reads only sequences having an average Qscore &gt;=30, number of Ns &lt;=1 and less than 5 bases having
 # a Qscore lower than 15 will be kept.
 qscore1=30
-N=1
+N=0
 qscore2=15
 lq_threshold=5
-# Reads having length lower than &lt;minlength&gt; are discarded.
+# Reads having length between minlength and maxlength are kept. The rest are discarded.
 minlength=100
+maxlength=350
 R1_start=0
-R1_end=15
+R1_end=70
 R2_start=0
-R2_end=0
+R2_end=70
 # primer sequence has to have a number of matching bases &gt;= &lt;primerMismatch&gt;. Will search primer
 # sequence in the first or last &lt;length3Prime&gt; and &lt;length5Prime&gt; bases.
-primerMismatch=15
+# correct_orientation is intended for PacBio data type were CCS reads are sometimes generated in both 5'--&gt;3' and 3'--&gt;5' orientation.
+correct_orientation=false
+# reject_unmatched is set to true when reads that do not contain expected primer sequences should be rejected.
+reject_unmatched=false
+primerMismatch=6
 length3Prime=30
 length5Prime=30
 num_threads=1
-# Cluster/SLURM specific parameters that will override the [DEFAULT] parameters.
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1
-cluster_pmem=--mem=12000
-cluster_queue=
+
 
 [bbduk]
 # more on bbduk's parameters by running bbduk.sh -h
@@ -443,7 +451,6 @@ k=21
 c=1
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=12000
 .
 .
@@ -470,24 +477,30 @@ rdp_training_set=$INSTALL_HOME/databases/RDP_training_sets/silva/2017-07-12/genu
 chimeras=$INSTALL_HOME/databases/fasta/broad/gold.fa
 
 [clustering]
-#clustering_method accepted values: &quot;deblur&quot;, &quot;dnaclust&quot; or &quot;vsearch&quot;
+# clustering_method accepted values: &quot;deblur&quot;, &quot;dnaclust&quot;, &quot;vsearch&quot; or &quot;dada2&quot;
 clustering_method=vsearch
-#reads_type accepted values: &quot;short_reads&quot; or &quot;long_reads&quot;. for long reads, only one round of clustering will be done (first_round arg below)
+# reads_type accepted values: &quot;short_reads&quot; or &quot;long_reads&quot;. for long reads, only one round of clustering will be done (first_round arg below)
 reads_type=short_reads
+# For the min_reads parameter, Only sequences &gt;= &lt;int&gt; will be
+# kept. So sequences &lt; &lt;int&gt; are discarded.
+# For instance, if &lt;int&gt;=2, only cluster that have a total of at least 2 will be kept.
+# The min_reads cutoff is applied after the first round of clustering for dnaclust and vsearch and after ASV generation for deblur and dada2.
+min_reads=25
 ########################
 #parameters for dnaclust and vsearch
-#For the lowAbunCutoOff parameter, Only sequences &gt;= &lt;int&gt; will be
-#kept. So sequences &lt; &lt;int&gt; are discarded.
-#For instance, if &lt;int&gt;=2, only cluster that have a total of at least 2 will be kept.
-lowAbunCutOff=25
 first_round=0.99
 second_round=0.97
 ########################
 # parameters for deblur.
 trim_length=249
 indel_max=5
-min_reads=25
 min_size=0
+########################
+#parameters for dada2: qc done in previous step (tags_QC). leave maxEE=2 as this paramter is not implemented in tagsQC.pl
+trimLeft=0
+maxEE=2
+truncQ=0
+minQ=0
 ########################
 num_threads=16
 </code></pre>
@@ -643,7 +656,7 @@ validateMapAndBarcodes.pl \\
 </div>
 </div>
 </div>
-<div id="workflow-walkthrough" class="section level1">
+<div id="section2" class="section level1">
 <h1>2- Workflow walkthrough</h1>
 <p>In the next section, we will go through each step of the AmpliconTagger pipeline and describe all results that are generated in each of these steps. For this example, the pipeline was run with 16S amplicons paired-end fastqs configuration.</p>
 <div id="description-of-results-generated-by-each-job" class="section level2">
@@ -661,8 +674,7 @@ validateMapAndBarcodes.pl \
   --infile_mapping_file ./mapping_file.tsv &amp;&amp; \ 
   touch ./amplicontagger/validateMapAndBarcodes.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To compare barcodes file headers with the field #SampleID in the mapping file. The script will identify 
-discrepencies in standard error.</code></pre>
+<p>To compare barcodes file headers with the field #SampleID in the mapping file. The script will identify discrepencies in standard error.</p>
 </div>
 </div>
 <div id="step-2--remove_contam" class="section level3">
@@ -682,7 +694,7 @@ bbduk.sh \
   overwrite=true \
   threads=1</code></pre>
 <p>Purpose:</p>
-<pre><code>To scan fastq libraries for known sequencing contaminants and remove them.</code></pre>
+<p>To scan fastq libraries for known sequencing contaminants and remove them.</p>
 <p>.ini:</p>
 <pre><code>[DEFAULT]
 contaminants=$INSTALL_HOME/databases/contaminants/Illumina.artifacts.fa
@@ -692,7 +704,6 @@ k=21
 c=1
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=12000</code></pre>
 </div>
 <div id="job-duk_phix" class="section level4">
@@ -709,7 +720,7 @@ bbduk.sh \
   overwrite=true \
   threads=1</code></pre>
 <p>Purpose:</p>
-<pre><code>To scan fastq libraries for PhiX reads and remove them.</code></pre>
+<p>To scan fastq libraries for PhiX reads and remove them.</p>
 <p>.ini:</p>
 <pre><code>[DEFAULT]
 phix=$INSTALL_HOME/databases/contaminants/phix174_NC_001422.1.fasta
@@ -719,7 +730,6 @@ k=21
 c=1
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=12000</code></pre>
 </div>
 </div>
@@ -736,13 +746,12 @@ barcodes.pl \
 --num_threads 1  \
 --log ./amplicontagger/assembled/fastqs/ncontam_nphix_barcodes.txt</code></pre>
 <p>Purpose:</p>
-<pre><code>To split/demultiplex a fastq file by its barcode sequences.</code></pre>
+<p>To split/demultiplex a fastq file by its barcode sequences.</p>
 <p>.ini:</p>
 <pre><code>[barcodes]
 num_threads=1
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=12000</code></pre>
 </div>
 <div id="job-remove_unpaired" class="section level4">
@@ -755,18 +764,14 @@ removeUnpaired.pl \
 --outfile_2 ./amplicontagger/assembled/fastqs/ncontam_nphix_unpaired_2.fastq \
 --num_threads 1</code></pre>
 <p>Purpose:</p>
-<pre><code>To remove unpaired reads from a paired end reads fastq file.
-Paired end reads of a fastq file might get disrupted
-after filtering for contaminants. This scripts assumes
-that reads are in a collated paired end reads order.
-For instance:
-@A/1
+<p>To remove unpaired reads from a paired end reads fastq file. Paired end reads of a fastq file might get disrupted after filtering for contaminants. This scripts assumes that reads are in a collated paired end reads order. For instance:</p>
+<pre><code>@A/1
 @A/2
 @B/2
 @C/1
 @C/2
-@D/1
-Will only keep valid pairs having both /1 and /2.</code></pre>
+@D/1</code></pre>
+<p>Will only keep valid pairs having both /1 and /2: <span class="citation">@A</span> and <span class="citation">@C</span>.</p>
 <p>.ini:</p>
 <pre><code>[remove_unpaired]
 num_threads=1
@@ -782,7 +787,7 @@ splitPairs.pl \
 --outfile_2 ./amplicontagger/assembled/fastqs/ncontam_nphix_2.fastq \
 --num_threads 4</code></pre>
 <p>Purpose:</p>
-<pre><code>To split interleaved fastq in two files: one for R1 and the other for R2.</code></pre>
+<p>To split interleaved fastq in two files: one for R1 and the other for R2.</p>
 <p>.ini:</p>
 <pre><code>[split_pairs]
 num_threads=4
@@ -806,13 +811,12 @@ qscoreSheets.pl \
  --barcodes barcodes.fasta \
  --num_threads 16</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate Qscore sheets using fastx_quality_stats. </code></pre>
+<p>To generate Qscore sheets using fastx_quality_stats.</p>
 <p>.ini:</p>
 <pre><code>[qscore_sheet]
 num_threads=16
 cluster_walltime=-t 24:00:0
 cluster_cpu=-N 1 -n 16
-cluster_queue=
 cluster_pmem=--mem=32000</code></pre>
 </div>
 <div id="job-generate_qscore_reads2" class="section level4">
@@ -829,7 +833,7 @@ qscoreSheets.pl \
  --barcodes barcodes.fasta \
  --num_threads 16</code></pre>
 <p>Purpose:</p>
-<pre><code>Same as generate_qscore_reads1</code></pre>
+<p>Same as generate_qscore_reads1</p>
 <p>.ini:</p>
 <pre><code>Same as generate_qscore_reads1</code></pre>
 </div>
@@ -844,7 +848,7 @@ qscorePlots.pl \
   --display 1 \
   --paired</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate Qscore profile figures for each sequencing library.</code></pre>
+<p>To generate Qscore profile figures for each sequencing library.</p>
 <p>.ini:</p>
 <pre><code>[qscore_plot]
 cluster_walltime=-t 01:00:0
@@ -860,18 +864,14 @@ cluster_cpu=-N 1 -n 1</code></pre>
 cutFastqSeq.pl \
 --infile ./amplicontagger/assembled/fastqs/ncontam_nphix_1.fastq \
 --begin 0 \
---end 0 \
+--end 70 \
 --outfile ./amplicontagger/assembled/fastqs/ncontam_nphix_trimmed_1.fastq</code></pre>
 <p>Purpose:</p>
-<pre><code>To remove a specific number of nucleotides from either
-the beginning or the end of reads (or both). Useful if we 
-have a library that consistently shows bad quality after 
-nt 125, or a library in which the last nucleotides 
-are consistently of bad quality.</code></pre>
+<p>To remove a specific number of nucleotides from either the beginning or the end of reads (or both). Useful if we have a library that consistently shows bad quality after nt 125, or a library in which the last nucleotides are consistently of bad quality.</p>
 <p>.ini:</p>
 <pre><code>[tags_QC]
 R1_start=0
-R1_end=0
+R1_end=70
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1</code></pre>
 </div>
@@ -881,14 +881,14 @@ cluster_cpu=-N 1 -n 1</code></pre>
 cutFastqSeq.pl \
 --infile ./amplicontagger/assembled/fastqs/ncontam_nphix_2.fastq \
 --begin 0 \
---end 0 \
+--end 70 \
 --outfile ./amplicontagger/assembled/fastqs/ncontam_nphix_trimmed_2.fastq</code></pre>
 <p>Purpose:</p>
-<pre><code>Same as cut_reads1 job</code></pre>
+<p>Same as cut_reads1 job, but for reads 2.</p>
 <p>.ini:</p>
 <pre><code>[tags_QC]
 R2_start=0
-R2_end=0
+R2_end=70
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1</code></pre>
 </div>
@@ -903,65 +903,76 @@ flash.pl \
 --outdir ./amplicontagger/assembled/fastqs \
 --n 10000 \
 --mismatches 7 \
---M 280 \
---x 0.25 \
 --p 33 \
 --num_threads 4</code></pre>
 <p>Purpose:</p>
-<pre><code>To merge overlapping paired-end reads using their common overlapping parts.</code></pre>
+<p>To merge/assemble overlapping paired-end reads using their common overlapping parts. The <code>flash.pl</code> script first tries to assemble 10,000 reads (<code>--n 10000</code>) with these parameters: <code>flash  ./amplicontagger/assembled/fastqs/reads_subset/ncontam_nphix_trimmed_1.fastq_subset1.fastq ./amplicontagger/assembled/fastqs/reads_subset/ncontam_nphix_trimmed_2.fastq_subset2.fastq -r 180 -o assembled -d ./amplicontagger/assembled/fastqs/assembly_sampling -m 7 -t 4</code> - and computes the average length of the assembled sequences and standard deviation. In this case the <code>-r 180</code> corresponds to the average length of forward and reverse reads combined - which were cut from 70 bases starting from their 3’ end in the previous step. Based on the assembled fastq file from the subset of data <code>amplicontagger/reads_12/fastqs/assembly_sampling/assembled.extendedFrags.fastq</code>, the following values are computed:</p>
+<pre><code>Average read length:      180 
+Average fragment length:  294
+Standard deviation:         2 </code></pre>
+<p>And the following command is then being run on the entire dataset: <code>flash  ./amplicontagger/reads_12/fastqs/ncontam_nphix_trimmed_1.fastq ./amplicontagger/reads_12/fastqs/ncontam_nphix_trimmed_2.fastq -r 180 -s 2 -f 294 -o ncontam_nphix_trimmed -d ./amplicontagger/reads_12/fastqs/assembly_complete -t 4 -m 7 &amp;&gt; ./amplicontagger/reads_12/fastqs/assembly_complete/ncontam_nphix_trimmed.log</code> The generated data will be written in this directory <code>amplicontagger/reads_12/fastqs/assembly_complete/</code> and contains the resulting fastq <code>ncontam_nphix_trimmed.extendedFrags.fastq</code> and also stastistics, log, histograms and the uncombined forward and reverse reads in two separate files.</p>
 <p>.ini:</p>
 <pre><code>[flash]
 sampling=10000
 minOverlap=7
-maxOverlap=280
 percentMismatch=0.25
 phred=33
 num_threads=4
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 4
-cluster_queue=
 cluster_pmem=--mem=16000</code></pre>
 </div>
 <div id="job-tags_qc" class="section level4">
 <h4>JOB: tags_QC</h4>
 <pre><code>module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 &amp;&amp; \
 tagsQC.pl \
- --infile ./amplicontagger/assembled/fastqs/assembly_complete/ncontam_nphix_trimmed.extendedFrags.fastq \
- --primer_3_prime /project/PROJECT_ID/databases/primers/V4/V4_R.fasta \
- --length_3_prime 30 \
- --primer_5_prime /project/PROJECT_ID/databases/primers/V4/V4_F.fasta \
- --length_5_prime 30 \
- --qscore_1 30 \
- --qscore_2 15 \
- --outfile ./amplicontagger/assembled/fastqs/ncontam_nphix_trimmed.extendedFrags_QCpassed.fastq \
- --outfile_failed ./amplicontagger/assembled/fastqs/ncontam_nphix_trimmed.extendedFrags_QCfailed.fastq \
+ --infile ./amplicontagger/reads_12/fastqs/assembly_complete/ncontam_nphix_trimmed.extendedFrags.fastq \
+ --primer_5_prime /project/6008026/databases/primers/V4/V4_F.fasta \
+ --length_5_prime 30 \ 
+ --primer_3_prime /project/6008026/databases/primers/V4/V4_R.fasta \
+ --length_3_prime 30 \ 
+ --qscore_1 30 \ 
+ --qscore_2 15 \ 
+ --outfile ./amplicontagger/reads_12/fastqs/ncontam_nphix_trimmed.extendedFrags_QCpassed.fastq \
+ --outfile_failed ./amplicontagger/reads_12/fastqs/ncontam_nphix_trimmed.extendedFrags_QCfailed.fastq \
  --num_threads 1 \
- --qual 33 \
+ --qual 33 \ 
  --lq_threshold 5 \
- --primer_mismatch 15 \
+ --primer_mismatch 6 \
  --min_length 100 \
- --N 1</code></pre>
+ --max_length 350 \
+ --N 0 \
+ --log ./amplicontagger/reads_12/fastqs/qc_log.txt</code></pre>
 <p>Purpose:</p>
-<pre><code>To filter fastq reads by their quality scores. Will also remove primer regions in 5' and/or 3' if primer sequences are specified in input arguments.</code></pre>
+<p>To filter fastq reads by their quality scores. Will also remove primer regions in 5’ and/or 3’ if primer sequences are specified in input arguments. Here for the current example, reads in the <code>ncontam_nphix_trimmed.extendedFrags.fastq</code> file are being filtered in such a way that all reads will be scanned for both their forward and reverse primer sequences, the V4 primer pair in our case. It will search in the 30 first nucleotides of each read for the sequence provided in the <code>V4_F.fasta</code> file and remove the part of the read matching the sequence primer. The same thing is done for the 3’ end of the read with the reverse primer sequence found in the <code>V4_R.fasta</code> file. Once primer sequences have been removed, the remaining part of the now truncated read are filtered for their quality. Here each read having either an average Phred quality score lower than <code>30</code> or <code>5</code> bases lower than Phred quality score <code>15</code> or more than <code>0 N</code> (undefined bases) are rejected. If a read passes these filters, it goes through the length filter. In this example, reads having a length lower than <code>100</code> or higher than <code>350</code> are rejected. The length filter does not really do anything for this data type as pretty much all sequences found in the ncontam_nphix_trimmed.extendedFrags.fastq are of similar length: 293 bases +/- 1 or 2 bases. However, in some data types like ITS amplicons or single end PacBio long reads, this filter can be useful to filter out reads that are probably sequencing artefacts.</p>
 <p>.ini:</p>
 <pre><code>[tags_QC]
 # For instance if qscore1=30, N=1, qscore2=15 and lq_threshold=5,
 # reads only sequences having an average Qscore &gt;=30, number of Ns &lt;=1 and less than 5 bases having
 # a Qscore lower than 15 will be kept.
 qscore1=30
-N=1
+N=0
 qscore2=15
 lq_threshold=5
 # Reads having length lower than &lt;minlength&gt; are discarded.
 minlength=100
+maxlength=350
+R1_start=0
+R1_end=70
+R2_start=0
+R2_end=70
 # primer sequence has to have a number of matching bases &gt;= &lt;primerMismatch&gt;. Will search primer
 # sequence in the first or last &lt;length3Prime&gt; and &lt;length5Prime&gt; bases.
-primerMismatch=15
+correct_orientation=false
+reject_unmatched=false
+# For primers with wobbles, primerMismatch can be set to 6 to 15. For primers with no ambiguous bases, primerMismatch can be set between 1 and 4.
+primerMismatch=6
 length3Prime=30
 length5Prime=30
 num_threads=1
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1</code></pre>
+<p>Results: In this AAD_demo example, we ended up with xxx failed and xxx passed sequences.</p>
 </div>
 <div id="job-qscore_sheet_assembled_qced" class="section level4">
 <h4>JOB: qscore_sheet_assembled_qced</h4>
@@ -977,13 +988,12 @@ qscoreSheets.pl \
  --barcodes barcodes.fasta \
  --num_threads 16</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate Qscore sheets of merged amplicon sequences.</code></pre>
+<pre><code>To generate Qscore (Phred) sheets of merged amplicon sequences. </code></pre>
 <p>.ini:</p>
 <pre><code>[qscore_sheet]
 num_threads=16
 cluster_walltime=-t 24:00:0
 cluster_cpu=-N 1 -n 16
-cluster_queue=
 cluster_pmem=--mem=32000</code></pre>
 </div>
 <div id="job-qscore_graph_assembled_qced" class="section level4">
@@ -996,18 +1006,31 @@ qscorePlots.pl \
  --display 1 \
  --single</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate Qscore profile figures for each merged amplicon sequencing library.</code></pre>
+<p>To generate Qscore profile figures for each merged amplicon sequencing library.</p>
 <p>.ini:</p>
 <pre><code>[qscore_plot]
 cluster_walltime=-t 01:00:0
 cluster_cpu=-N 1 -n 1</code></pre>
+<p>Results:</p>
+<p>At this point all the quality score related results are located here: <code>amplicontagger/reads_12/qscores/</code> and contains the following files:</p>
+<pre><code>barcodes_assembled_QCpassed_log.txt
+qscores_1.tsv
+qscores_2.tsv
+qscores_assembled_QCpassed.pdf
+qscores_assembled_QCpassed.tsv
+qual_stats_12_log.txt
+qual_stats_1_log.txt
+qual_stats_unassembled.pdf</code></pre>
+<p>Here are a few Q score boxplots for a few samples as an example below. In these plots (<code>qual_stats_unassembled.pdf</code>) are the Q score profile of each forward and reverse reads separately - before paired-end assembly. <!--![Figure 2. Summary of the interaction between main pipeline workflow, its libraries and the .ini file.](Qscore_unassembled.png)--></p>
+<p>In these plots (<code>qscores_assembled_QCpassed.pdf</code>) are the Q score profile of each paired-end assembled sequence.</p>
+<!--[Figure 3. Summary of the interaction between main pipeline workflow, its libraries and the .ini file.](Qscore_assembled.png)-->
 </div>
 </div>
 <div id="step-6--generate_clusters" class="section level3">
 <h3>Step 6- generate_clusters</h3>
 <div id="job-generate_clusters_vsearch" class="section level4">
 <h4>JOB: generate_clusters_vsearch</h4>
-<p>Additional note on generate_clusters: AmpliconTagger currently supports two methods to generate clusters (i.e. OTUs): vsearch and dnaclust. It also supports one Amplicon Sequence Variants (ASV) method (deblur).</p>
+<p>Additional note on generate_clusters: AmpliconTagger currently supports two methods to generate clusters (i.e. OTUs): vsearch and dnaclust. It also supports two Amplicon Sequence Variants (ASV) methods (deblur and dada2).</p>
 <pre><code>module load nrc/vsearch/2.7.1 nrc/nrc_tools_public/dev  nrc/perl/5.26.0 &amp;&amp; \
 clusteringShortReadsVsearch.pl \
  --infile_fastq ./amplicontagger/assembled/fastqs/ncontam_nphix_trimmed.extendedFrags_QCpassed.fastq \
@@ -1019,39 +1042,87 @@ clusteringShortReadsVsearch.pl \
  --lowAbunCutOff 25 \
  --num_threads 16</code></pre>
 <p>Purpose:</p>
-<pre><code>To cluster amplicon sequences by their similarity or generate amplicon sequence variants.</code></pre>
+<p>To cluster amplicon sequences by their similarity or generate amplicon sequence variants. This script basically performs the two step clustering workflow described in the AmpliconTagger paper.Briefly, reads are clustered at 100% identity and then clustered/denoised at 99% identity (vsearch, dnaclust). Clusters having abundances lower than 3 are discarded. Remaining clusters are then scanned for chimeras with Vsearch’s version of UCHIME denovo and UCHIME reference and clustered at 97% (dnaclust or vsearch) to form the final clusters/OTUs. For PacBio long amplicons, filtered reads are clustered at 97% identity and clusters having less than 2 reads (i.e. customizable parameter) are discarded. Remaining reads are scanned for chimera using UCHIME reference. If deblur or DADA2 are used, filtered reads are used as input for deblur or DADA2. Resulting ASVs are then scanned for chimeras with Vsearch’s version of UCHIME denovo and UCHIME reference. In the case of DADA2, input paired-end reads are provided as forward and reverse reads separately (not paired-end assembled).</p>
 <p>.ini:</p>
 <pre><code>[clustering]
-#clustering_method accepted values: &quot;deblur&quot;, &quot;dnaclust&quot; or &quot;vsearch&quot;
+#clustering_method accepted values: &quot;deblur&quot;, &quot;dnaclust&quot;, &quot;vsearch&quot; or &quot;deblur&quot;
 clustering_method=vsearch
 #reads_type accepted values: &quot;short_reads&quot; or &quot;long_reads&quot;. for long reads, only one round of clustering will be done (first_round arg below)
 reads_type=short_reads
+# For the min_reads parameter, Only sequences &gt;= &lt;int&gt; will be
+# kept. So sequences &lt; &lt;int&gt; are discarded.
+# For instance, if &lt;int&gt;=2, only cluster that have a total of at least 2 will be kept.
+min_reads=25
 ########################
 #parameters for dnaclust and vsearch
-#For the lowAbunCutoOff parameter, Only sequences &gt;= &lt;int&gt; will be
-#kept. So sequences &lt; &lt;int&gt; are discarded.
-#For instance, if &lt;int&gt;=2, only cluster that have a total of at least 2 will be kept.
-lowAbunCutOff=25
 first_round=0.99
 second_round=0.97
 ########################
 # parameters for deblur.
 trim_length=249
 indel_max=5
-min_reads=25
 min_size=0
 ########################
 num_threads=16
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 16
 cluster_pmem=--mem=72000</code></pre>
+<p>Results:</p>
+<p>Here are the commands that are being executed by the <code>clusteringShortReadsVsearch.pl</code> wrapper script:</p>
+<pre><code># Dereplicate sequences at 100% identity.
+dereplicate.pl --fastq ./amplicontagger/reads_12/fastqs/ncontam_nphix_trimmed.extendedFrags_QCpassed.fastq --outfile ./amplicontagger/reads_12/obs/derep1.fasta --num_threads 16
+
+# Perform clustering.
+vsearch --cluster_smallmem  ./amplicontagger/reads_12/obs/derep1.fasta  --id 0.99 --uc ./amplicontagger/reads_12/obs/derep1_099.uc --log ./amplicontagger/reads_12/obs/derep1_099.log --usersort --threads 16
+
+# Sort sequences and remove clusters having less than 25 abundance across all samples.
+dereplicate.pl -fasta ./amplicontagger/reads_12/obs/derep1_099.fasta -outfile ./amplicontagger/reads_12/obs/derep1_099_derep2.fasta -minsize 25 -sort                         
+
+# Scan for chimeras denovo.
+vsearch --uchime_denovo ./amplicontagger/reads_12/obs/derep1_099_derep2.fasta --nonchimeras ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovo.fasta
+
+# Scan for chimeras - reference.
+vsearch --uchime_ref ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovo.fasta --db /project/6008026/databases/fasta/broad/gold.fa --nonchimeras ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDe
+NovoRef.fasta --threads 16
+
+# Sort sequences.
+dereplicate.pl -fasta ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef.fasta -outfile ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef_sorted.fasta -sort
+
+# Performd second round clustering at 97% identity.
+vsearch --cluster_smallmem ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef_sorted.fasta --id 0.97 --log ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDenovoRef_sorted_097.log --uc ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDenovoRef_sorted_097.uc --usersort --threads 16
+
+# Sort clusters by abundance and writes cluster matrix.
+dereplicate.pl --fasta ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef_sorted_097.fasta --outfile ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef_sorted_097_sorted.fasta --sort
+~                                                                                                                    </code></pre>
+<p>All the intermediate files generated during the clustering process are located here: <code>amplicontagger/reads_12/obs/</code> and contain the following files:</p>
+<pre><code>ls -lhrt amplicontagger/reads_12/obs/
+
+-rw-rw-r-- 1 root root  33M Aug  9 16:05 derep1.fasta
+-rw-rw-r-- 1 root root  11M Aug  9 16:05 derep1_099.uc
+-rw-rw-r-- 1 root root  752 Aug  9 16:05 derep1_099.log
+-rw-rw-r-- 1 root root 6.1M Aug  9 16:05 derep1_099.fasta
+-rw-rw-r-- 1 root root  96K Aug  9 16:05 derep1_099_derep2.fasta
+-rw-rw-r-- 1 root root  46K Aug  9 16:05 derep1_099_derep2_nonChimDeNovo.fasta
+-rw-rw-r-- 1 root root  45K Aug  9 16:05 derep1_099_derep2_nonChimDeNovoRef_sorted.fasta
+-rw-rw-r-- 1 root root  45K Aug  9 16:05 derep1_099_derep2_nonChimDeNovoRef.fasta
+-rw-rw-r-- 1 root root  973 Aug  9 16:05 obs.tsv
+-rw-rw-r-- 1 root root 8.9K Aug  9 16:05 obs.fasta
+-rw-rw-r-- 1 root root  22K Aug  9 16:05 derep1_099_derep2_nonChimDenovoRef_sorted_097.uc
+-rw-rw-r-- 1 root root  12K Aug  9 16:05 derep1_099_derep2_nonChimDeNovoRef_sorted_097_sorted.fasta
+-rw-rw-r-- 1 root root  841 Aug  9 16:05 derep1_099_derep2_nonChimDenovoRef_sorted_097.log
+-rw-rw-r-- 1 root root  12K Aug  9 16:05 derep1_099_derep2_nonChimDeNovoRef_sorted_097.fasta</code></pre>
+<p><code>derep1.fasta</code> contains all 100% dereplicated sequences. The abundance information is stored in the header of each sequence. For instance, the second most abundant sequence (labeled 2 in the fasta file) contains the following header:</p>
+<pre><code>&gt;2;#AAAAAGCCG=12628;#AAAAACTGA=18151;#AAAAAACTG=19940;size=50719
+TACGTAGGGGGCAAGCGTTATCCGGATTTACTGGGTGTAAAGGGAGCGTAGGTGGTAGGTCAAGTCAGATGTGAAAGCCCAGGGCTCAACCCTGGGACTGCATTTGAAACTGGCTTACTAGAGTGCAGGAGAGGTAAGTGGAATTCCTAGTGTAGCGGTGAAATGCGTAGATATTAGGAGGAACACCAGTGGCGAAGGCGGCTTACTGGACTGTAACTGACACTGAGGCTCGAAAGCGTGGGGAGCAAACAGG</code></pre>
+<p>Meaning that this exact sequence was observed 12,628 times in sample/index #AAAAAGCCG, 18,151 times in index #AAAAACTGA, 19,940 times in index #AAAAAACTG for a total count of 50,719.</p>
+<p>This file <code>derep1.fasta</code> is then clustered at 99% identity using vsearch which generates <code>derep1_099.uc</code> and <code>derep1_099.log</code> files. The .uc file is then parsed to obtain the <code>derep1_099.fasta</code> file which is then sorted and filtered so that all clusters having abundance lower than 25 are discarded. This gives the <code>derep1_099_derep2.fasta</code> file which is then scanned for chimeras using consecutive vsearch uchime denovo and reference to generate the following files: <code>derep1_099_derep2_nonChimDeNovo.fasta</code> and <code>derep1_099_derep2_nonChimDeNovoRef.fasta</code>. This latter file is then sorted <code>derep1_099_derep2_nonChimDeNovoRef_sorted.fasta</code> and clustered at 97% identity using vsearch to yield the <code>derep1_099_derep2_nonChimDenovoRef_sorted_097.uc</code> file which is then parsed to generate <code>derep1_099_derep2_nonChimDenovoRef_sorted_097.fasta</code>. This latter file is sorted and used to generate the <code>obs.tsv</code> and <code>obs.fasta</code> files - which are the end results of this clustering workflow.</p>
 </div>
 </div>
 <div id="step-7--classify" class="section level3">
 <h3>Step 7- classify</h3>
 <div id="job-classify" class="section level4">
 <h4>JOB: classify</h4>
-<p>Here the RDP classifier is used to classify clusters or ASVs generated above. We use our own training set, done with the SILVA 128 release (at the time of writing) - <a href="https://github.com/jtremblay/RDP-training-sets" class="uri">https://github.com/jtremblay/RDP-training-sets</a></p>
+<p>Here the RDP classifier is used to classify clusters or ASVs generated above. We use our own training set, done with the SILVA 128 release (at the time of writing) - <a href="https://github.com/jtremblay/RDP-training-sets" class="uri">https://github.com/jtremblay/RDP-training-sets</a>. The <code>parallelRDP.pl</code> script is a wrapper that splits the <code>obs.fasta</code> file in parts equal to the number of specified threads <code>--threads &lt;int&gt;</code> and launch parallel instances of the RDP executable command: <code>java -d64 -Xmx3g -jar /project/6008026/software/rdp_classifier/rdp_classifier-2.5/rdp_classifier.jar -q /scratch/tmpDirRDPvUjVhdb/seq1.fasta -o /scratch/tmpDirRDPvUjVhdb/OUT_1 -t /path/to/databases/RDP_training_sets/silva/2017-07-12/genus/rRNAClassifier.properties --minWords 120</code> If more than one thread is specified all outputs in the tmp folder are concatenated in the <code>./amplicontagger/assembled/rdp/rdp.tsv</code> file.</p>
 <pre><code>module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 nrc/rdp_classifier/2.5 nrc/java/jdk1.8.0_144 &amp;&amp; \
 if [[ -s ./amplicontagger/assembled/obs/obs.fasta ]] ; then
     parallelRDP.pl \
@@ -1066,7 +1137,7 @@ else
     touch ./amplicontagger/assembled/rdp/rdp.tsv
 fi ;</code></pre>
 <p>Purpose:</p>
-<pre><code>To assign a taxonomic lineage to each cluster representative sequence or ASVs </code></pre>
+<p>To assign a taxonomic lineage to each cluster representative sequence or ASVs</p>
 <p>.ini:</p>
 <pre><code>[DEFAULT]
 rdp_training_set=$INSTALL_HOME/databases/RDP_training_sets/silva/2017-07-12/genus/rRNAClassifier.properties
@@ -1077,13 +1148,12 @@ minWords=120
 RAM=8g
 cluster_walltime=-t 6:00:0
 cluster_cpu=-N 1 -n 4
-cluster_queue=
 cluster_pmem=--mem=48000</code></pre>
 </div>
 </div>
 <div id="step-8--generate_otu_table" class="section level3">
 <h3>Step 8- generate_otu_table</h3>
-<p>From this point forward, the otu_table* file names can refer to OTU tables or ASV tables. The file name prefix contains the otu_table term to specify that the file format follows the legacy .tsv OTU table format.</p>
+<p>From this point forward, the otu_table* file names can refer to OTU tables or ASV tables. The file name prefix contains the otu_table prefix to specify that the file format follows the legacy .tsv OTU table format.</p>
 <div id="job-generate_otu_table_open" class="section level4">
 <h4>JOB: generate_otu_table_open</h4>
 <pre><code>module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev &amp;&amp; \
@@ -1095,15 +1165,14 @@ addTaxToObs.pl \
   --outfile_failed ./amplicontagger/assembled/otu_tables/otu_table_failed.tsv \
   --tax_level best</code></pre>
 <p>Purpose:</p>
-<pre><code>To adds a taxonomic lineage to each cluster or ASV to generate a legacy OTU table file format. Here lineages of each entry will be reconstructed so that each taxonomic depth assignment has a value higher than 0.5. For instance, given the following lineage generated by the RDP classifier for a given cluster or ASV:
-1.0     k__Bacteria                      Kingdom 
+<p>To add a taxonomic lineage to each cluster or ASV to generate a legacy OTU table file format. Here lineages of each entry will be reconstructed so that each taxonomic depth assignment has a value higher than 0.5. For instance, given the following lineage generated by the RDP classifier for a given cluster or ASV:</p>
+<pre><code>1.0     k__Bacteria                      Kingdom 
 1.0     p__Firmicutes                    Phylum  
 0.99    c__Clostridia                    Class   
 0.99    o__Clostridiales                 Order   
 0.99    f__Clostridiaceae                Family  
-0.29    g__uncultured-Clostridiaceae     Genus
-
-The resulting lineage will be k__Bacteria;p__Firmicutes;c__Clostridia;o__Clostridiales;f__Clostridiaceae and will exlude the g__ level taxon as it has a confidence score lower than 0.5.</code></pre>
+0.29    g__uncultured-Clostridiaceae     Genus</code></pre>
+<p>The resulting lineage will be k__Bacteria;p__Firmicutes;c__Clostridia;o__Clostridiales;f__Clostridiaceae and will exlude the g__ level taxon as it has a confidence score lower than 0.5.</p>
 <p>.ini:</p>
 <pre><code>[add_taxonomy]
 # Threshold value for constructing lineages from the RDP classifier results.
@@ -1124,7 +1193,7 @@ rmEmptyCol.pl \
   --infile ./amplicontagger/assembled/otu_tables/otu_table.tsv \
   --outfile ./amplicontagger/assembled/otu_tables/otu_table_filtered.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>To remove empty columns (samples). This rarely happens, but can break downstream steps if not adressed.</code></pre>
+<p>To remove empty columns (samples). This rarely happens, but can break downstream steps if not adressed.</p>
 <p>.ini:</p>
 <pre><code>[filter_otu_table]
 cluster_walltime=-t 01:00:0
@@ -1141,9 +1210,12 @@ splitOTUTable.pl \
   --keepMito no \
   --select bacteriaArchaea</code></pre>
 <p>Purpose:</p>
-<pre><code>To split the OTU table based on the input --select &lt;string&gt; value. All lineages matching that value will be kept in the --matched &lt;string&gt; outfile.</code></pre>
+<p>To split the OTU table based on the input <code>--select &lt;string&gt;</code> value. All lineages matching that value will be kept in the <code>--matched &lt;string&gt;</code> outfile. This step is simple but critical and is directly dependant on the nature of the primer pair used to generate the amplicons. If for instance the V4 or V4-V6 primer pairs were used in the sequencing library preparation, the value <code>bacteriaArchaea</code> should be assigned to the parameter <code>organism_type=</code> in the .ini file. This value is used as input in the <code>splitOTUtable.pl</code> script above and will filter for OTUs/ASVs that were assigned a Bacteria or Archaea value at the kingdom level. Some primer pairs are specific to Bacteria, Fungi or Eukaryotes. Failure to specify the appropriate parameter here will have significant impact in downstream results and overall data interpretation.</p>
 <p>.ini:</p>
-<pre><code>[split_otu_table]
+<pre><code>[DEFAULT]
+organism_type=bacteriaArchaea
+
+[split_otu_table]
 cluster_walltime=-t 01:00:0
 cluster_cpu=-N 1 -n 1</code></pre>
 </div>
@@ -1157,12 +1229,11 @@ biom convert \
   -o ./amplicontagger/assembled/otu_tables/otu_table_filtered_bacteriaArchaea.biom \
   --table-type 'OTU table' --to-hdf5 --process-obs-metadata taxonomy</code></pre>
 <p>Purpose:</p>
-<pre><code>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</code></pre>
+<p>To convert <code>.tsv</code> (legacy format) OTU table to <code>.biom</code> format to make it compatible for downstream steps invoking Qiime.</p>
 <p>.ini:</p>
 <pre><code>[convert_otu_table]
 cluster_walltime=-t 06:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=96000</code></pre>
 </div>
 <div id="job-rarefy_hdf5_multi_norm_1000" class="section level4">
@@ -1180,7 +1251,7 @@ multipleRarefactionsEvenDepth.pl \
   --permutations 500 \
   --num_threads 4</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate 500 (--permutations 500) OTU tables, rarefied to 1000 reads each.</code></pre>
+<p>To generate 500 (<code>--permutations 500</code>) OTU tables, rarefied to 1,000 reads each. All 500 tables will be written in the <code>./amplicontagger/assembled/otu_tables/rarefactions/1000/rarefaction</code> directory.</p>
 <p>.ini:</p>
 <pre><code># For OTU table normalization through rarefaction
 [rarefaction]
@@ -1190,7 +1261,6 @@ perm_normalization=500
 num_threads=4
 cluster_walltime=-t 24:00:0
 cluster_cpu=-N 1 -n 4
-cluster_queue=
 cluster_pmem=--mem=64000</code></pre>
 </div>
 <div id="job-convert_biom_to_tsv_multi_norm_1000" class="section level4">
@@ -1200,14 +1270,13 @@ cluster_pmem=--mem=64000</code></pre>
 convertBiomToTsvMulti.pl --indir ./amplicontagger/assembled/otu_tables/rarefactions/1000/rarefaction --num_threads 12 &amp;&amp; \
   touch ./amplicontagger/assembled/otu_tables/rarefactions/1000/rarefactions_convert_biom_to_tsv.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To convert .biom tables generated in the previous step to .tsv tables.</code></pre>
+<p>To convert .biom tables generated in the previous step to .tsv tables. Once done, a done file is created/touched for job dependency management purposes by the pipeline. That .done file is used by the pipeline as a dumy input for the next following job.</p>
 <p>.ini:</p>
 <pre><code># For rarefaction as a means of normalization.
 [convert_otu_tables]
 num_threads=12
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 12
-cluster_queue=
 cluster_pmem=--mem=12000</code></pre>
 </div>
 <div id="job-merge_rarefied_tables_norm_1000" class="section level4">
@@ -1216,13 +1285,12 @@ cluster_pmem=--mem=12000</code></pre>
 
     mergeRarefiedTables.pl --indir ./amplicontagger/assembled/otu_tables/rarefactions/1000/rarefaction &gt; ./amplicontagger/assembled/otu_tables/otu_table_filtered_bacteriaArchaea_rarefied_1000.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>To take the .tsv rarefied tables generated in the previous step and generate a consensus OTU table in which the average number of reads for each OTU/ASV of each sample will be computed.</code></pre>
+<p>From the .tsv rarefied tables generated in the previous step, generate a consensus OTU table in which the average number of reads for each OTU/ASV of each sample will be computed.</p>
 <p>.ini:</p>
 <pre><code># also for rarefaction as a means of normalization.
 [merge_rarefied_tables]
 cluster_walltime=-t 24:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=128000</code></pre>
 </div>
 <div id="job-convert_otu_table_to_biom_rarefied_norm_1000" class="section level4">
@@ -1234,12 +1302,11 @@ biom convert \
   -o ./amplicontagger/assembled/otu_tables/otu_table_filtered_bacteriaArchaea_rarefied_1000.biom \
   --table-type 'OTU table' --to-hdf5 --process-obs-metadata taxonomy</code></pre>
 <p>Purpose:</p>
-<pre><code>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</code></pre>
+<p>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</p>
 <p>.ini:</p>
 <pre><code>[convert_otu_table]
 cluster_walltime=-t 06:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=96000</code></pre>
 </div>
 <div id="job-normalize_otu_table_target_organisms" class="section level4">
@@ -1255,14 +1322,13 @@ biom convert \
   -o ./amplicontagger/assembled/otu_tables/otu_table_filtered_bacteriaArchaea_normalized.biom \
   --table-type 'OTU table' --to-hdf5 --process-obs-metadata taxonomy</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a normalized OTU/ASV table using edgeR's RLE normalization method. See edgeR manual for more information. Briefly, each value of each cell represents a Count Per Million (CPM).</code></pre>
+<p>To generate a normalized OTU/ASV table using edgeR’s RLE normalization method. See edgeR manual for more information. Briefly, each value of each cell represents a Count Per Million (CPM).</p>
 <p>.ini:</p>
 <pre><code>[normalization]
 # reads per columns/samples. Sample(s) having a total number reads lower than this threshold value will be discarded. 
 normalization_threshold=250
 cluster_walltime=-t 10:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=128000</code></pre>
 </div>
 <div id="job-convert_otu_table_to_biom_everything" class="section level4">
@@ -1274,12 +1340,11 @@ biom convert \
   -o ./amplicontagger/assembled/otu_tables/otu_table_filtered.biom \
   --table-type 'OTU table' --to-hdf5 --process-obs-metadata taxonomy</code></pre>
 <p>Purpose:</p>
-<pre><code>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</code></pre>
+<p>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</p>
 <p>.ini:</p>
 <pre><code>[convert_otu_table]
 cluster_walltime=-t 06:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=96000</code></pre>
 </div>
 </div>
@@ -1287,13 +1352,14 @@ cluster_pmem=--mem=96000</code></pre>
 <h3>Step 10- prepare_tables_for_diversity</h3>
 <div id="job-filter_otu_table_normalized" class="section level4">
 <h4>JOB: filter_otu_table_normalized</h4>
+<p>This job acts as a final sanity check on the normalized OTU/ASV table, by making sure that no empty samples remain and that the table is sorted by the abundance of the sum or its rows (OTU/ASV). Additionaly, the <code>_final_</code> suffix is added to the output table file name (i.e. <code>otu_table_final_rarefied.tsv</code>). This “final” table will be used for downstream steps computing diversity and taxonomic profiles.</p>
 <pre><code>module load nrc/perl/5.26.0 nrc/R/3.4.0 nrc/nrc_tools_public/dev  &amp;&amp; \
 rmEmptyCol.pl \
   --infile ./amplicontagger/assembled/otu_tables/otu_table_filtered_bacteriaArchaea_normalized.tsv \
   --outfile ./amplicontagger/assembled/otu_tables/otu_table_final_normalized.tsv.tmp &amp;&amp; \
 sortOTUTable.R -i ./amplicontagger/assembled/otu_tables/otu_table_final_normalized.tsv.tmp -o ./amplicontagger/assembled/otu_tables/otu_table_final_normalized.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>From the normalized OTU/ASV table, removes samples with 0 reads and sorts the table by abundance (the sum of each row).</code></pre>
+<p>From the normalized OTU/ASV table, removes samples with 0 reads and sorts the table by abundance (the sum of each row). Also rename the table with the ‘checkpoint’ suffix <code>_final_normalized</code>. This normalized table is generated but not used for downstream steps at the moment.</p>
 <p>.ini:</p>
 <pre><code>[filter_otu_table]
 cluster_walltime=-t 01:00:0
@@ -1308,7 +1374,7 @@ rmEmptyCol.pl \
   --outfile ./amplicontagger/assembled/otu_tables/otu_table_final_rarefied.tsv.tmp &amp;&amp; \
 sortOTUTable.R -i ./amplicontagger/assembled/otu_tables/otu_table_final_rarefied.tsv.tmp -o ./amplicontagger/assembled/otu_tables/otu_table_final_rarefied.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>From the consensus rarefied OTU/ASV table, removes samples with 0 reads and sorts the table by abundance (the sum of each row).</code></pre>
+<p>From the consensus rarefied OTU/ASV table, removes samples with 0 reads and sorts the table by abundance (the sum of each row).</p>
 <p>.ini:</p>
 <pre><code>[filter_otu_table]
 cluster_walltime=-t 01:00:0
@@ -1316,7 +1382,6 @@ cluster_cpu=-N 1 -n 1</code></pre>
 </div>
 <div id="job-convert_otu_table_to_biom_norm" class="section level4">
 <h4>JOB: convert_otu_table_to_biom_norm</h4>
-<p>This job also acts as a final sanity check on the normalized OTU/ASV table, by making sure that no empty samples remain and that the table is sorted by the abundance of the sum or its rows (OTU/ASV). Additionaly, the <code>_final_</code> suffix is added to the output table file name (i.e. <code>otu_table_final_rarefied.tsv</code>). This “final” table will be used for downstream steps computing diversity and taxonomic profiles.</p>
 <pre><code>module load nrc/qiime/1.9.1 nrc/qiime-dependencies/1.9.0 nrc/python/2.7.5 nrc/GotoBLAS+LAPACK/1.13 &amp;&amp; \
 rm -f ./amplicontagger/assembled/otu_tables/otu_table_final_normalized.biom &amp;&amp; \
 biom convert \
@@ -1324,12 +1389,11 @@ biom convert \
   -o ./amplicontagger/assembled/otu_tables/otu_table_final_normalized.biom \
   --table-type 'OTU table' --to-hdf5 --process-obs-metadata taxonomy</code></pre>
 <p>Purpose:</p>
-<pre><code>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</code></pre>
+<p>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</p>
 <p>.ini:</p>
 <pre><code>[convert_otu_table]
 cluster_walltime=-t 06:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=96000</code></pre>
 </div>
 <div id="job-convert_otu_table_to_biom_rarefied" class="section level4">
@@ -1341,12 +1405,11 @@ biom convert \
   -o ./amplicontagger/assembled/otu_tables/otu_table_final_rarefied.biom \
   --table-type 'OTU table' --to-hdf5 --process-obs-metadata taxonomy</code></pre>
 <p>Purpose:</p>
-<pre><code>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</code></pre>
+<p>To convert .tsv (legacy format) OTU table to .biom format to make it compatible for downstream steps invoking Qiime.</p>
 <p>.ini:</p>
 <pre><code>[convert_otu_table]
 cluster_walltime=-t 06:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=96000</code></pre>
 </div>
 </div>
@@ -1360,7 +1423,7 @@ filterForPyNAST.pl \
   --infile_fasta ./amplicontagger/assembled/obs/obs.fasta \
   &gt; ./amplicontagger/assembled/otu_tables/otus.fasta</code></pre>
 <p>Purpose:</p>
-<pre><code>To filter the raw OTU or ASV fasta file to include only OTU/ASV IDs that are present in the provided --infile_otu_table &lt;string&gt; file.</code></pre>
+<p>To filter the raw OTU or ASV fasta file to include only OTU/ASV IDs that are present in the provided <code>--infile_otu_table &lt;string&gt;</code> .tsv file.</p>
 <p>.ini:</p>
 <pre><code>[filter_for_pynast]
 cluster_walltime=-t 01:00:0
@@ -1377,7 +1440,7 @@ cluster_cpu=-N 1 -n 1</code></pre>
   -a ./amplicontagger/assembled/pynast/pynast.fasta \
   -t /project/PROJECT_ID/databases/fasta/greengenes/core_set_aligned.fasta</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a multiple sequence alignment using PyNAST.</code></pre>
+<p>To generate a multiple sequence alignment using PyNAST.</p>
 <p>.ini:</p>
 <pre><code>[pynast]
 num_threads=1
@@ -1391,7 +1454,7 @@ cluster_cpu=-N 1 -n 1</code></pre>
     -i ./amplicontagger/assembled/pynast/pynast.fasta \
     -o ./amplicontagger/assembled/pynast</code></pre>
 <p>Purpose:</p>
-<pre><code>This script will remove positions which are gaps in every sequence (common for PyNAST, as typical sequences cover only 200-400 bases, and they are being aligned against the full 16S gene) - taken from http://qiime.org/scripts/filter_alignment.html).</code></pre>
+<p>This script will remove positions which are gaps in every sequence (common for PyNAST, as typical sequences cover only 200-400 bases, and they are being aligned against the full 16S gene) - taken from <a href="http://qiime.org/scripts/filter_alignment.html" class="uri">http://qiime.org/scripts/filter_alignment.html</a>).</p>
 <p>.ini:</p>
 <pre><code>[DEFAULT] parameters</code></pre>
 </div>
@@ -1402,7 +1465,7 @@ FastTree \
   -nt ./amplicontagger/assembled/pynast/pynast_pfiltered.fasta \
   &gt; ./amplicontagger/assembled/fasttree/tree.fasttree</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a phylogenetic tree from the PyNAST alignment generated above.</code></pre>
+<p>To generate a phylogenetic tree from the PyNAST alignment generated above.</p>
 <p>.ini:</p>
 <pre><code>[fasttree]
 cluster_walltime=-t 12:00:0
@@ -1424,7 +1487,7 @@ summarize_taxa.py \
   sed -i 's/#OTU ID/Taxon/' ./amplicontagger/assembled/tax_summary/absolute/otu_table_final_rarefied_L1.txt &amp;&amp; \
   perl -ni -e 'print unless($_ =~ m/Constructed from biom file/)' ./amplicontagger/assembled/tax_summary/absolute/otu_table_final_rarefied_L1.txt</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a taxonomic abundance table for the specified taxonomic depth.</code></pre>
+<p>To generate a taxonomic abundance table for the specified taxonomic depth.</p>
 <p>.ini:</p>
 <pre><code>[summarize_taxonomy]
 #Seven for genus, eight for species
@@ -1432,7 +1495,6 @@ taxonomy_depth=7
 num_threads=1
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=12000</code></pre>
 </div>
 <div id="job-tax_summary_relative_l1" class="section level4">
@@ -1445,7 +1507,7 @@ summarize_taxa.py \
   sed -i 's/#OTU ID/Taxon/' ./amplicontagger/assembled/tax_summary/relative/otu_table_final_rarefied_L1.txt &amp;&amp; \
   perl -ni -e 'print unless($_ =~ m/Constructed from biom file/)' ./amplicontagger/assembled/tax_summary/relative/otu_table_final_rarefied_L1.txt</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a taxonomic abundance table for the specified taxonomic depth.</code></pre>
+<p>To generate a taxonomic abundance table for the specified taxonomic depth. Here the <code>taxonomy_depth=7</code> parameter should be 7 for short amplicons and 8 for long reads data type. Taxonomy depth can technicially be set to 8, but should be avoided as assigned species level taxonomy to short amplicon data is controversial.</p>
 <p>.ini:</p>
 <pre><code>[summarize_taxonomy]
 #Seven for genus, eight for species
@@ -1453,7 +1515,6 @@ taxonomy_depth=7
 num_threads=1
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 1
-cluster_queue=
 cluster_pmem=--mem=12000</code></pre>
 </div>
 <div id="job-plot_taxa_single_relative_l1" class="section level4">
@@ -1465,7 +1526,7 @@ taxBarplot.R \
   -o ./amplicontagger/assembled/tax_summary/relative/plots/ \
   -p taxonomy_L1_relative</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a simple taxonomic profile figure.</code></pre>
+<p>To generate a simple taxonomic profile figure.</p>
 <p>.ini:</p>
 <pre><code>[plot_taxa]
 cluster_walltime=-t 01:00:0
@@ -1479,7 +1540,7 @@ taxBarplot.R \
   -o ./amplicontagger/assembled/tax_summary/absolute/plots/ \
   -p taxonomy_L1_absolute</code></pre>
 <p>Purpose:</p>
-<pre><code>Generate a simple taxonomic profile figure.</code></pre>
+<p>Generate a simple taxonomic profile figure.</p>
 <p>.ini:</p>
 <pre><code>[plot_taxa]
 cluster_walltime=-t 01:00:0
@@ -1494,7 +1555,7 @@ taxBarplotWithMappingFile.R \
   -p taxonomy_L1_relative \
   -m ./mapping_file.tsv &amp;&amp; touch ./amplicontagger/assembled/tax_summary/relative/plots/taxonomy_L1_relative.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate multiple taxonomic profile figures covering the variables provided in the mapping file.</code></pre>
+<p>To generate multiple taxonomic profile figures covering the variables provided in the mapping file.</p>
 <p>.ini:</p>
 <pre><code>[plot_taxa]
 cluster_walltime=-t 01:00:0
@@ -1515,7 +1576,7 @@ beta_diversity.py \
   &amp;&amp; unset OMPI_MCA_mtl \
   &amp;&amp; sed -i 's/nan/0.0/g' ./amplicontagger/assembled/beta_div/weighted_unifrac_otu_table_final_rarefied.txt</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a weighted UniFrac distance matrix from an OTU table.</code></pre>
+<p>To generate a weighted UniFrac distance matrix from an OTU table.</p>
 <p>.ini:</p>
 <pre><code>[beta_diversity]
 cluster_walltime=-t 03:00:0
@@ -1534,7 +1595,7 @@ beta_diversity.py \
   &amp;&amp; unset OMPI_MCA_mtl \
   &amp;&amp; sed -i 's/nan/0.0/g' ./amplicontagger/assembled/beta_div/bray_curtis_otu_table_final_rarefied.txt</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a Bray-Curtis dissimilarity matrix from an OTU table.</code></pre>
+<p>To generate a Bray-Curtis dissimilarity matrix from an OTU table.</p>
 <p>.ini:</p>
 <pre><code>[beta_diversity]
 cluster_walltime=-t 03:00:0
@@ -1548,7 +1609,7 @@ principal_coordinates.py \
   -i ./amplicontagger/assembled/beta_div/weighted_unifrac_otu_table_final_rarefied.txt \
   -o ./amplicontagger/assembled/beta_div/weighted_unifrac_otu_table_final_rarefied_coords.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate principal coordinates from a distance matrix (weighted UniFrac).</code></pre>
+<p>To generate principal coordinates from a distance matrix (weighted UniFrac).</p>
 <p>.ini:</p>
 <pre><code>[pca]
 cluster_walltime=-t 00:20:0
@@ -1561,7 +1622,7 @@ principal_coordinates.py \
   -i ./amplicontagger/assembled/beta_div/bray_curtis_otu_table_final_rarefied.txt \
   -o ./amplicontagger/assembled/beta_div/bray_curtis_otu_table_final_rarefied_coords.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate principal coordinates from a dissimilarity matrix (Bray-Curtis).</code></pre>
+<p>To generate principal coordinates from a dissimilarity matrix (Bray-Curtis).</p>
 <p>.ini:</p>
 <pre><code>[pca]
 cluster_walltime=-t 00:20:0
@@ -1575,7 +1636,7 @@ make_2d_plots.py \
   -m ./mapping_file.tsv \
   -o ./amplicontagger/assembled/beta_div/plots</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate interactive 2-dimensional PCoA plots using variables provided in the mapping file.</code></pre>
+<p>To generate interactive 2-dimensional PCoA plots using variables provided in the mapping file.</p>
 <p>.ini:</p>
 <pre><code>[pca_plot]
 cluster_walltime=-t 00:20:0
@@ -1589,7 +1650,7 @@ make_2d_plots.py \
   -m ./mapping_file.tsv \
   -o ./amplicontagger/assembled/beta_div/plots</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate interactive 2-dimensional PCoA plots using variables provided in the mapping file.</code></pre>
+<p>To generate interactive 2-dimensional PCoA plots using variables provided in the mapping file.</p>
 <p>.ini:</p>
 <pre><code>[pca_plot]
 cluster_walltime=-t 00:20:0
@@ -1603,7 +1664,7 @@ make_emperor.py \
   -m ./mapping_file.tsv \
   -o ./amplicontagger/assembled/beta_div/plots/3d_weighted_unifrac</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate interactive 3-dimensional PCoA plots using variables provided in the mapping file.</code></pre>
+<p>To generate interactive 3-dimensional PCoA plots using variables provided in the mapping file.</p>
 <p>.ini:</p>
 <pre><code>[pca_plot]
 cluster_walltime=-t 00:20:0
@@ -1617,7 +1678,7 @@ make_emperor.py \
   -m ./mapping_file.tsv \
   -o ./amplicontagger/assembled/beta_div/plots/3d_bray_curtis</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate interactive 3-dimensional PCoA plots using variables provided in the mapping file.</code></pre>
+<p>To generate interactive 3-dimensional PCoA plots using variables provided in the mapping file.</p>
 <p>.ini:</p>
 <pre><code>[pca_plot]
 cluster_walltime=-t 00:20:0
@@ -1633,7 +1694,7 @@ plotPCA.R \
   -m ./mapping_file.tsv &amp;&amp;
   touch ./amplicontagger/assembled/beta_div/plots/pcaPlots.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate multiple 2-dimensional plots using variables provided in the mapping file.</code></pre>
+<p>To generate multiple 2-dimensional plots using variables provided in the mapping file.</p>
 <p>.ini:</p>
 <pre><code>[pca_plot]
 cluster_walltime=-t 00:20:0
@@ -1649,7 +1710,7 @@ plotPCA.R \
   -m ./mapping_file.tsv &amp;&amp;
   touch ./amplicontagger/assembled/beta_div/plots/pcaPlots.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate multiple 2-dimensional plots using variables provided in the mapping file.</code></pre>
+<p>To generate multiple 2-dimensional plots using variables provided in the mapping file.</p>
 <p>.ini:</p>
 <pre><code>[pca_plot]
 cluster_walltime=-t 00:20:0
@@ -1675,9 +1736,9 @@ multipleRarefactions.pl \
   --num_threads 6 \
   &amp;&amp; touch ./amplicontagger/assembled/alpha_div/saturation/rarefactions.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate rarefied tables at the specified read depth. If --n &lt;int&gt; is not specified, the script will determine 20 rarefaction values covering the range of read abundance of all samples.</code></pre>
+<p>To generate rarefied tables at the specified read depth. If –n <int> is not specified (as per the present case), the script will determine 20 rarefaction values covering the range of read abundance of all samples. All rarefied tables are written in the <code>./amplicontagger/assembled/alpha_div/saturation/rarefaction/</code> directory.</p>
 <p>.ini: Other parameters exists under <code>[multiple_rarefaction]</code>. Only those specific to the multiple_rarefaction_saturation job are shown here.</p>
-<pre><code># For OTU single table rarefaction for alpha diversity
+<pre><code># For OTU single table rarefaction for alpha diversity or for saturation alpha diversity
 [multiple_rarefaction]
 rarefaction_threshold=1000
 perm_saturation=10
@@ -1700,7 +1761,7 @@ parallel_alpha_diversity.py \
   unset OMPI_MCA_mtl &amp;&amp; \
   rm -rf ./amplicontagger/assembled/alpha_div/saturation/alpha_rarefaction/ALDIV_*</code></pre>
 <p>Purpose:</p>
-<pre><code>To compute specified diversity indexes of each rarefied table generated in the previous step.</code></pre>
+<p>To compute specified diversity indexes of each rarefied table generated in the previous step. All diversity index tables are written in the following directory: <code>amplicontagger/assembled/alpha_div/saturation/alpha_rarefaction/</code></p>
 <p>.ini:</p>
 <pre><code>[alpha_diversity]
 m=chao1:observed_species:shannon:simpson
@@ -1717,13 +1778,13 @@ collate_alpha.py \
   -o ./amplicontagger/assembled/alpha_div/saturation/collated \
   &amp;&amp; touch ./amplicontagger/assembled/alpha_div/saturation/collateAlpha.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To merge diversity indexes computed in the previous step into a single table.</code></pre>
+<p>To merge diversity indexes computed in the previous step into a single table. Here the <code>amplicontagger/assembled/alpha_div/saturation/collated/</code> directory will contain 4 tables for these 4 indexes : chao1, observed_species, shannon and simpson.</p>
 <p>.ini:</p>
 <pre><code>[collate_alpha]
 cluster_walltime=-t 03:00:0
 cluster_cpu=-N 1 -n 1
 cluster_pmem=--mem=12000</code></pre>
-<p>The next 3 jobs: multiple_rarefaction, alpha_diversity and collate_alpha will generate rarefied tables at one specific read depth in the objective of obtaining alpha diversity indexes for each sample.</p>
+<p>The next 3 jobs: multiple_rarefaction, alpha_diversity and collate_alpha will generate rarefied tables at one specific read depth in the objective of obtaining alpha diversity indexes for each sample. In this case the <code>n_standard=1000</code> parameter is critical. By default it is set to 1,000 reads only. In practice however, it can be set to a higher value. For instance say 80 samples out of 90 have reads depth above 5,000, then <code>n_standard</code> could be set to <code>5000</code>. However, it will drop out the 10 samples not meeting that cutoff. If needed this step can be revisited with a more appropriate <code>n_standard</code> value after a first round of end results interpretation.</p>
 </div>
 <div id="job-multiple_rarefaction" class="section level4">
 <h4>JOB: multiple_rarefaction</h4>
@@ -1742,7 +1803,7 @@ multipleRarefactions.pl \
   --num_threads 6 \
   &amp;&amp; touch ./amplicontagger/assembled/alpha_div/rarefactions.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate rarefied tables at the specified read depth.</code></pre>
+<p>To generate rarefied tables at the specified read depth. The perl wrapper script <code>multipleRarefactions.pl</code> will launch an instance of the Qiime 1 script <code>parallel_multiple_rarefactions.py -i ./amplicontagger/assembled/otu_tables/otu_table_filtered_bacteriaArchaea.biom -m 1 -x 1000 -s 999 -n 10 -o ./amplicontagger/assembled/alpha_div/rarefaction/ -O 6</code> where rarefied tables will be written in the <code>./amplicontagger/assembled/alpha_div/rarefaction/</code> folder.</p>
 <p>.ini:</p>
 <pre><code># For OTU single table rarefaction for alpha diversity
 [multiple_rarefaction]
@@ -1754,7 +1815,6 @@ perm=10
 num_threads=6
 cluster_walltime=-t 12:00:0
 cluster_cpu=-N 1 -n 6
-cluster_queue=
 cluster_pmem=--mem=24000</code></pre>
 </div>
 <div id="job-alpha_diversity" class="section level4">
@@ -1771,7 +1831,7 @@ parallel_alpha_diversity.py \
   unset OMPI_MCA_mtl &amp;&amp; \
   rm -rf ./amplicontagger/assembled/alpha_div/alpha_rarefaction/ALDIV_*</code></pre>
 <p>Purpose:</p>
-<pre><code>To compute specified diversity indexes of each rarefied table generated in the previous step.</code></pre>
+<p>To compute specified diversity indexes of each rarefied table generated in the previous step.</p>
 <p>.ini:</p>
 <pre><code>[alpha_diversity]
 m=chao1:observed_species:shannon:simpson
@@ -1788,7 +1848,7 @@ collate_alpha.py \
   -o ./amplicontagger/assembled/alpha_div/collated \
   &amp;&amp; touch ./amplicontagger/assembled/alpha_div/collateAlpha.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To merge diversity indexes computed in the previous step into a single table.</code></pre>
+<p>To merge diversity indexes computed in the previous step into a single table.</p>
 <p>.ini:</p>
 <pre><code>[collate_alpha]
 cluster_walltime=-t 03:00:0
@@ -1811,7 +1871,7 @@ cluster_pmem=--mem=12000</code></pre>
    -m ./mapping_file.tsv \
   &amp;&amp; touch ./amplicontagger/assembled/alpha_div/plots/rarefactionPlots.done</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate various alpha diversity figures (Observed OTUs/species, Shannon) based on the variables of the mapping file.</code></pre>
+<p>To generate various alpha diversity figures (Observed OTUs/species, Shannon) based on the variables of the mapping file.</p>
 <p>.ini:</p>
 <pre><code>[rarefaction_plots]
 cluster_walltime=-t 00:60:0
@@ -1833,7 +1893,7 @@ upgma_cluster.py \
   -p weighted_unifrac_otu_table_final_rarefied_UPGMA \
   &amp;&amp; unset OMPI_MCA_mtl</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a UPGMA tree using the weighted UniFrac distance matrix previously generated.</code></pre>
+<p>To generate a UPGMA tree using the weighted UniFrac distance matrix previously generated.</p>
 <p>.ini:</p>
 <pre><code>[upgma_clustering]
 cluster_walltime=-t 00:20:0
@@ -1852,7 +1912,7 @@ upgma_cluster.py \
   -p bray_curtis_otu_table_final_rarefied_UPGMA \
   &amp;&amp; unset OMPI_MCA_mtl</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a UPGMA tree using the Bray-Curtis dissimilarity matrix previously generated.</code></pre>
+<p>To generate a UPGMA tree using the Bray-Curtis dissimilarity matrix previously generated.</p>
 <p>.ini:</p>
 <pre><code>[upgma_clustering]
 cluster_walltime=-t 00:20:0
@@ -1871,7 +1931,7 @@ OTUheatmap.R \
   -n 20 \
   -m ./mapping_file.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate an annotated heaptmap of the most 20 abundant OTUs. </code></pre>
+<p>To generate an annotated heaptmap of the most 20 abundant OTUs.</p>
 <p>.ini:</p>
 <pre><code>[otu_heatmap]
 n=20:75
@@ -1889,7 +1949,7 @@ OTUheatmap.R \
   -n 75 \
   -m ./mapping_file.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate an annotated heaptmap of the most 75 abundant OTUs.</code></pre>
+<p>To generate an annotated heaptmap of the most 75 abundant OTUs.</p>
 <p>.ini:</p>
 <pre><code>[otu_heatmap]
 n=20:75
@@ -1902,6 +1962,7 @@ cluster_pmem=--mem=12000</code></pre>
 <h3>Step 17- blast</h3>
 <div id="job-blast" class="section level4">
 <h4>JOB: blast</h4>
+<p>The bastn step against NCBI nt is implemented to provide complementary information in case of ambiguous or suspucious taxonomic identification using the RDP classifier. In practice however, most hits will point to entries assigned as uncultured organisms as taxonomic identifier.</p>
 <pre><code>module load nrc/blast/2.6.0+ nrc/nrc_tools_public/dev  &amp;&amp; \
 blastn \
   -db $INSTALL_HOME/databases/ncbi_nt/nt \
@@ -1912,7 +1973,7 @@ blastn \
   -num_threads 16 \
   &amp;&amp; keepBestBlastHit.pl --infile ./amplicontagger/assembled/blast/blast.out &gt; ./amplicontagger/assembled/blast/blast.out.besthit</code></pre>
 <p>Purpose:</p>
-<pre><code>To blast OTUs/ASV sequences against the NCBI nt database.</code></pre>
+<p>To blast OTUs/ASV sequences against the NCBI nt database.</p>
 <p>.ini:</p>
 <pre><code>[blast]
 db=$INSTALL_HOME/databases/ncbi_nt/nt
@@ -1951,7 +2012,7 @@ countReport.pl \
  --obsTable ./amplicontagger/assembled/obs/obs.tsv \
  &gt; ./amplicontagger/assembled/countReport.tsv</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a table documenting the read count through the various steps of the pipeline.</code></pre>
+<p>To generate a table documenting the read count through the various steps of the pipeline.</p>
 <p>.ini:</p>
 <pre><code>Default [DEFAULT] parameters.</code></pre>
 </div>
@@ -1969,14 +2030,14 @@ tar -zcvf ./amplicontagger/2019_05_29_Project_title_amplicontagger_complete.tar.
                                   --exclude='./amplicontagger/assembled/otu_tables/rarefactions' \
                                   ./mapping_file.tsv ./amplicontagger/assembled/</code></pre>
 <p>Purpose:</p>
-<pre><code>To generate a tarball of the pipeline's most relevant outputs, including fastqs (excluding the original raw reads).</code></pre>
+<p>To generate a tarball of the pipeline’s most relevant outputs, including fastqs (excluding the original raw reads).</p>
 <p>.ini:</p>
 <pre><code>Default [DEFAULT] parameters.</code></pre>
 </div>
 </div>
 </div>
 </div>
-<div id="smart-restart-mechanism" class="section level1">
+<div id="section3" class="section level1">
 <h1>3- Smart restart mechanism</h1>
 <p>One useful feature of AmpliconTagger is its built-in smart-restart mechanism. For instance, let’s generate jobs for the first step of the pipeline by running the following command : <code>amplicontagger.py -c ./AmpliconTagger.ini -s 1 -o . -j slurm -b barcodes.fasta -z ./pipeline.json  &gt; ./commands.sh</code> and let’s have look at the job definition:</p>
 <pre><code>#-------------------------------------------------------------------------------
@@ -2012,7 +2073,7 @@ If we run the first step of the pipeline again (<code>amplicontagger.py -c ./Amp
 Overall, the md5 signature is identical between the executed job and the new Job object and in consequence, no new job is created. If we would have modified the header of one of the fasta headers in the fasta file and had rerun the pipeline, this job would have been re-generated, because the pipeline would have found discrepencies in one of these values and would have found differences in the old and new md5 signed .done file. This mechanism is useful in the context of random job failure because of a faulty compute node or simply if the pipeline operator is interested in modifying one or many variables of a given step of the pipeline.<br />
 Another instance where this mechanism is useful is when a job crashes because we didn’t asked for enough memory or cores for its execution and SLURM detects this and kills off our job because the limits of the resources we asked for were not respected. When that happens, an exit_status other than 0 is returned for that offending job and the rest of the downstream dependant jobs are then killed by SLURM. Instead of manually going through each single job that went through to find which one returned a non-zero exit_status, the pipeline operator can simply rerun <code>amplicontagger.py</code> with the same parameters and see which jobs are generated.</p>
 </div>
-<div id="end-results" class="section level1">
+<div id="section4" class="section level1">
 <h1>4- End results</h1>
 <p>The arguably most important results generated by the pipeline are the following files:</p>
 <div id="read-counts" class="section level2">
@@ -2100,12 +2161,12 @@ amplicontagger/assembled/tax_summary/relative/otu_table_final_rarefied_L6.txt</c
 <pre><code>amplicontagger/assembled/fasttree/tree.fasttree</code></pre>
 </div>
 </div>
-<div id="preprocessing-pacbio-data" class="section level1">
+<div id="section5" class="section level1">
 <h1>5- Preprocessing PacBio data</h1>
-<p>PacBio CCS data comes in a format that needs to be processed before submitting to the pipeline.</p>
+<p>PacBio CCS data comes in a format that needs to be processed before submitting to the pipeline. PacBio CCS reads can be provided in both 5’–&gt;3’ and 3’–&gt;5’ orientation. When that is the case, reverse reads should be re-oriented in the 5’–&gt;3’ orientation. Below is an example of the tagsQC.pl execution to take care of that issue.</p>
 <p>From the nrc_tools_public repo, the following script can be run</p>
 <pre><code># First download PacBio CCS reads to a directory labelled pacbio_downloaded_data
-# IMPORTANT: the fastq files inside the pacbio_downloaded_data directory have to be gzipped and their names have to end with the following suffix: *_R1.fastq.gz
+# IMPORTANT: the fastq files inside the pacbio_downloaded_data directory have to be gzipped and their names have to end with the following suffix: *_R1.fastq.gz. 
 # Load the nrc_tools module
 module load nrc/nrc_tools_public/dev
 # Generate a readset file
@@ -2140,6 +2201,289 @@ replaceIllegalCharPacBio.pl \
 rm -f $JOB_DONE &amp;&amp; \
 module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev &amp;&amp; \
 gzip -c ./pacbio_preprocessed_reads/Mock1_phred33_1400_nic.fastq &gt; ./raw_reads/Mock1_R1.fastq.gz</code></pre>
+</div>
+<div id="section6" class="section level1">
+<h1>6- Job output folder</h1>
+<p>When a job is launched/submitted whether on the job scheduler or directly on the terminal with the <code>batch</code> option, the standard output and error are redirected and written in the <code>./job_output/</code> folder in the step subfolder that this job belongs to. For instance, consider the following job, where we have a <code>JOB_OUTPUT_DIR</code> set to <code>/project/microbiome_genomics/projects/AAD_demo/job_output</code>. The clustering step will generate a subdirectory :</p>
+<pre><code>STEP=generate_clusters
+mkdir -p $JOB_OUTPUT_DIR/$STEP</code></pre>
+<p>Then in the generate_clusters_vsearch job, we have the following instructions which will define the file that will hold the standard output and error:</p>
+<pre><code>JOB_NAME=generate_clusters_vsearch
+JOB_DEPENDENCIES=
+JOB_OUTPUT_RELATIVE_PATH=$STEP/${JOB_NAME}_$TIMESTAMP.o</code></pre>
+<p>Finally, when the job is submitted to the job scheduler with the following command: <code>sbatch --account=my_account_xyz --export=ALL --mail-type=END --mail-user=$JOB_MAIL -D $OUTPUT_DIR -o $JOB_OUTPUT -J $JOB_NAME -t 12:00:0  --mem=64000 -N 1 -n 16</code>, the <code>-o $JOB_OUTPUT</code> instructs the job scheduler were to write the standard output and error.</p>
+<p>Here is the complete chunk of instructions:</p>
+<pre><code>OUTPUT_DIR=/home/projects/AAD_demo
+JOB_OUTPUT_DIR=$OUTPUT_DIR/job_output
+TIMESTAMP=`date +%FT%H.%M.%S`
+JOB_LIST=$JOB_OUTPUT_DIR/AmpliconTagger_job_list_$TIMESTAMP
+mkdir -p $OUTPUT_DIR
+cd $OUTPUT_DIR
+
+#-------------------------------------------------------------------------------
+# STEP: generate_clusters
+#-------------------------------------------------------------------------------
+STEP=generate_clusters
+mkdir -p $JOB_OUTPUT_DIR/$STEP
+
+#-------------------------------------------------------------------------------
+# JOB: generate_clusters_1_JOB_ID: generate_clusters_vsearch
+#-------------------------------------------------------------------------------
+JOB_NAME=generate_clusters_vsearch
+JOB_DEPENDENCIES=
+JOB_DONE=job_output/generate_clusters/generate_clusters_vsearch.2a94a025dcd39720c532f1f2fb9deeb7.nrc.done
+JOB_OUTPUT_RELATIVE_PATH=$STEP/${JOB_NAME}_$TIMESTAMP.o
+JOB_OUTPUT=$JOB_OUTPUT_DIR/$JOB_OUTPUT_RELATIVE_PATH
+generate_clusters_1_JOB_ID=$(echo &quot;#!/bin/sh
+rm -f $JOB_DONE &amp;&amp; \
+set -o pipefail
+module load nrc/vsearch/2.7.1 nrc/nrc_tools_public/dev nrc/perl/5.26.0 &amp;&amp; \
+
+clusteringShortReadsVsearch.pl \
+ --infile_fastq ./amplicontagger/reads_12/fastqs/ncontam_nphix_trimmed.extendedFrags_QCpassed.fastq \
+ --ref_db /project/6008026/databases/fasta/broad/gold.fa \
+ --barcodes barcodes.fasta \
+ --outdir ./amplicontagger/reads_12/obs \
+ --first_round 0.99 \
+ --second_round 0.97 \
+ --lowAbunCutOff 25 \
+ --num_threads 16
+NRC_STATE=\$PIPESTATUS
+echo NRC_exitStatus:\$NRC_STATE
+if [ \$NRC_STATE -eq 0 ] ; then touch $JOB_DONE ; fi
+exit \$NRC_STATE&quot; | \
+sbatch --account=rrg-yergeaue --export=ALL --mail-type=END --mail-user=$JOB_MAIL -D $OUTPUT_DIR -o $JOB_OUTPUT -J $JOB_NAME -t 12:00:0  --mem=64000 -N 1 -n 16  | grep -o &quot;[0-9]*&quot;)
+echo &quot;$generate_clusters_1_JOB_ID   $JOB_NAME   $JOB_DEPENDENCIES   $JOB_OUTPUT_RELATIVE_PATH&quot; &gt;&gt; $JOB_LIST</code></pre>
+</div>
+<div id="section7" class="section level1">
+<h1>7- Integrating more options in a given bioinformatics package</h1>
+<p>One useful feature of AmpliconTagger (and the GenPipes WMS) is the possibility to customize each step of a workflow. For instance, if we would want to add an option for DADA2, we would need to add a few lines of code to the <code>clustering_dada2</code> function found in the <code>bio/microbial_ecology.py</code> file. As a reminder, the <code>clustering_dada2</code> function is called from the main pipeline script/wrapper <code>amplicontagger.py</code>:</p>
+<pre class="python"><code>job = rrna_amplicons.clustering_dada2(
+    barcodes_done_files,
+    os.path.join(self._lib_type_dir, &quot;obs&quot;, &quot;demultiplexed&quot;),
+    os.path.join(self._lib_type_dir, &quot;obs&quot;, &quot;dada2&quot;),
+    os.path.join(self._lib_type_dir, &quot;obs&quot;, &quot;dada2&quot;, &quot;all_nochimera.tsv&quot;),
+    os.path.join(self._lib_type_dir, &quot;obs&quot;, &quot;dada2&quot;, &quot;dada2.done&quot;),
+    data_type
+)
+job.name = &quot;generate_asv_dada2&quot;
+job.subname = &quot;clustering&quot;
+jobs.append(job)
+</code></pre>
+<p>where a job object will be instanciated in the <code>clustering_dada2</code> function of the <code>bio/rrna_amplicons.py</code> library:</p>
+<pre class="python"><code>def clustering_dada2(infiles_done, indir, outdir, outfile, done_file, data_type):
+
+    job = Job(
+        infiles_done,
+        [outfile, done_file],
+        [
+            ['R', 'module_R'],
+            ['tools', 'module_tools'],
+            ['perl', 'module_perl']
+        ]
+    )
+
+    job.command=&quot;&quot;&quot;
+dada2.R -i {indir} \\
+ -o {outdir} \\
+ -t {data_type} \\
+ -p {num_threads} \\
+ -l {trimLeft} \\
+ -m {maxEE} \\
+ -c {truncQ} \\
+ -q {minQ} &amp;&amp; touch {done_file}&quot;&quot;&quot;.format(
+    indir = indir,
+    outdir = outdir,
+    data_type = data_type,
+    num_threads = config.param('clustering', 'num_threads', 1, 'int'),
+    trimLeft = config.param('clustering', 'trimLeft', 1, 'int'),
+    maxEE = config.param('clustering', 'maxEE', 1, 'int'),
+    truncQ = config.param('clustering', 'truncQ', 1, 'int'),
+    minQ = config.param('clustering', 'minQ', 1, 'int'),
+    done_file = done_file
+)</code></pre>
+<p>In the current implementation, we only included 3 parameters specific to DADA2. If for instance at some point we realize that it would be useful to implement support for the <code>nbases</code> option for the <code>learnErrors()</code> function of the DADA2 package, we would need to add a line specifying this option in the <code>clustering_dada2</code> function:</p>
+<pre class="python"><code>def clustering_dada2(infiles_done, indir, outdir, outfile, done_file, data_type):
+
+    job = Job(
+        infiles_done,
+        [outfile, done_file],
+        [
+            ['R', 'module_R'],
+            ['tools', 'module_tools'],
+            ['perl', 'module_perl']
+        ]
+    )
+
+    # Add the option -n {nbases} below
+    job.command=&quot;&quot;&quot;
+dada2.R -i {indir} \\
+ -o {outdir} \\
+ -t {data_type} \\
+ -p {num_threads} \\
+ -l {trimLeft} \\
+ -m {maxEE} \\
+ -c {truncQ} \\
+ -n {nbases} \\
+ -q {minQ} &amp;&amp; touch {done_file}&quot;&quot;&quot;.format(
+    indir = indir,
+    outdir = outdir,
+    data_type = data_type,
+    num_threads = config.param('clustering', 'num_threads', 1, 'int'),
+    trimLeft = config.param('clustering', 'trimLeft', 1, 'int'),
+    maxEE = config.param('clustering', 'maxEE', 1, 'int'),
+    truncQ = config.param('clustering', 'truncQ', 1, 'int'),
+    minQ = config.param('clustering', 'minQ', 1, 'int'),
+    # Add the option support included in the .ini file.
+    nbases = config.param('clustering', 'nbases', 1, 'int'),
+    done_file = done_file</code></pre>
+<p>We would also need to add the option <code>nbases</code> in the <code>.ini</code> file under the <code>[clustering]</code> category.</p>
+<pre><code>[clustering]
+#clustering_method accepted values: &quot;deblur&quot;, &quot;dnaclust&quot; , &quot;dada2&quot; or &quot;vsearch&quot;
+clustering_method=dada2
+#reads_type accepted values: &quot;short_reads&quot; or &quot;long_reads&quot;.
+reads_type=long_reads
+min_reads=2
+
+#parameters for dnaclust and vsearch
+first_round=0.99
+second_round=0.97
+
+#parameters for deblur.
+trim_length=249
+indel_max=5
+min_size=0
+
+#parameters for dada2: qc done in previous step (tags_QC). leave maxEE=2 as this paramter is not implemented in tagsQC.pl
+trimLeft=0
+maxEE=2
+truncQ=0
+minQ=0
+### Add nbases option HERE!
+nbases=1e+08
+###
+
+#Scheduler parameters
+num_threads=16
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 16
+cluster_queue=
+cluster_pmem=--mem=64000</code></pre>
+<p>The final step is to add suport for this new <code>nbases</code> option in the <code>dada2.R</code> wrapper in the <code>nrc_tools_public</code> repository. Let’s first add the support for adding an option element starting at line 218 in the <code>dada2.R</code> wrapper script where we have the following chunk of code:</p>
+<pre class="r"><code>usage=function(errM) {
+        cat(&quot;\nUsage : Rscript dada2.R [option] &lt;Value&gt;\n&quot;)
+        cat(&quot;       -i        : indir\n&quot;)
+        cat(&quot;       -o        : outdir\n&quot;)
+        cat(&quot;       -t        : type\n&quot;)
+        cat(&quot;       -p        : num_threads\n&quot;)
+        cat(&quot;       -l        : trimLeft\n&quot;)
+        cat(&quot;       -m        : maxEE\n&quot;)
+        cat(&quot;       -c        : truncQ\n&quot;)
+        cat(&quot;       -q        : minQ\n&quot;)
+}
+
+ARG = commandArgs(trailingOnly = T)
+
+if(length(ARG) &lt; 8) {
+    usage(&quot;missing arguments&quot;)
+}
+print(&quot;ARGs&quot;)
+print(ARG)
+
+## get arg variables
+for (i in 1:length(ARG)) {
+    if(ARG[i] == &quot;-i&quot;) {
+        indir =     ARG[i+1]
+    }else if (ARG[i] == &quot;-o&quot;) {
+        outdir =    ARG[i+1]
+    }else if( ARG[i] == &quot;-t&quot;){
+       type =       ARG[i+1]
+    }else if( ARG[i] == &quot;-p&quot;){
+      num_threads = ARG[i+1]
+    }else if( ARG[i] == &quot;-l&quot;){
+       trimLeft.a = ARG[i+1]
+    }else if( ARG[i] == &quot;-m&quot;){
+       maxEE.a =    ARG[i+1]
+    }else if( ARG[i] == &quot;-c&quot;){
+       truncQ.a =   ARG[i+1]
+    }else if( ARG[i] == &quot;-q&quot;){
+       minQ.a =     ARG[i+1]
+    }   
+}
+
+doDada2(indir, outdir, type, num_threads, trimLeft.a, maxEE.a, truncQ.a, minQ.a)</code></pre>
+<p>… that we wish to bring to this:</p>
+<pre class="r"><code>usage=function(errM) {
+        cat(&quot;\nUsage : Rscript dada2.R [option] &lt;Value&gt;\n&quot;)
+        cat(&quot;       -i        : indir\n&quot;)
+        cat(&quot;       -o        : outdir\n&quot;)
+        cat(&quot;       -t        : type\n&quot;)
+        cat(&quot;       -p        : num_threads\n&quot;)
+        cat(&quot;       -l        : trimLeft\n&quot;)
+        cat(&quot;       -m        : maxEE\n&quot;)
+        cat(&quot;       -c        : truncQ\n&quot;)
+        cat(&quot;       -q        : minQ\n&quot;)
+        ## Here add option for nbase option
+        cat(&quot;       -n        : nbases\n&quot;)
+}
+
+ARG = commandArgs(trailingOnly = T)
+
+if(length(ARG) &lt; 9) {
+    usage(&quot;missing arguments&quot;)
+}
+print(&quot;ARGs&quot;)
+print(ARG)
+
+## get arg variables
+for (i in 1:length(ARG)) {
+    if(ARG[i] == &quot;-i&quot;) {
+        indir =     ARG[i+1]
+    }else if (ARG[i] == &quot;-o&quot;) {
+        outdir =    ARG[i+1]
+    }else if( ARG[i] == &quot;-t&quot;){
+       type =       ARG[i+1]
+    }else if( ARG[i] == &quot;-p&quot;){
+      num_threads = ARG[i+1]
+    }else if( ARG[i] == &quot;-l&quot;){
+       trimLeft.a = ARG[i+1]
+    }else if( ARG[i] == &quot;-m&quot;){
+       maxEE.a =    ARG[i+1]
+    }else if( ARG[i] == &quot;-c&quot;){
+       truncQ.a =   ARG[i+1]
+    }else if( ARG[i] == &quot;-q&quot;){
+       minQ.a =     ARG[i+1]
+   
+    # Add decision for the -n argument.
+    }else if( ARG[i] == &quot;-n&quot;){
+       nbases.a =  ARG[i+1]
+    }  
+   
+}
+
+# Add nbases.a variable to the doDada2 function
+doDada2(indir, outdir, type, num_threads, trimLeft.a, maxEE.a, truncQ.a, minQ.a, nbases.a)</code></pre>
+<p>Then in the <code>doDada2</code> function (also in the same <code>dada2.R</code> file) we have the following code starting at line 8:</p>
+<pre class="r"><code>doDada2 &lt;- function(indir, outdir, type, num_threads,
+                    trimLeft.a, maxEE.a, truncQ.a, minQ.a) {
+   ...
+}</code></pre>
+<p>for which we’ll add the nbases.a variable:</p>
+<pre class="r"><code>doDada2 &lt;- function(indir, outdir, type, num_threads,
+                    trimLeft.a, maxEE.a, truncQ.a, minQ.a, nbases.a) {
+    ...
+}  </code></pre>
+<p>The last step is to actually add the variable into the <code>learnErrors()</code> function. In the <code>dada2.R</code> script this function is invoked at four different places depending on the reads configuration. If paired-end short reads, <code>learnErrors()</code> will be called at lines 114 and 116. We just have to change this chunk of code:</p>
+<pre class="r"><code>      # Learn forward error rates
+      errF &lt;- learnErrors(filtFs, nbases=1e8, multithread=num_threads, verbose=TRUE)
+      # Learn reverse error rates
+      errR &lt;- learnErrors(filtRs, nbases=1e8, multithread=num_threads, verbose=TRUE)</code></pre>
+<p>for the following:</p>
+<pre class="r"><code>      # Learn forward error rates
+      errF &lt;- learnErrors(filtFs, nbases=nbases.a, multithread=num_threads, verbose=TRUE)
+      # Learn reverse error rates
+      errR &lt;- learnErrors(filtRs, nbases=nbases.a, multithread=num_threads, verbose=TRUE)</code></pre>
+<p>We should be ready to go with this new option implementation. Adding an option for DADA2 is one of the most complex scenario because DADA2 needs to be run in the R language. R language packages are usually encapsulated in a wrapper script for ease of use. For compiled software written in C or Java like BBDUK, it would have been easier to add an option directly in the <code>bbduk</code> function of the <code>bio/rrna_amplicons.py</code> script as this package does need to be wrapped inside a Perl of R script.</p>
 </div>
 
 
