@@ -232,9 +232,10 @@ root@centos7image:/project/microbiome_genomics$ pwd
 <p>Next we navigate to the projects directory where we have two directories:</p>
 <pre><code>&gt;cd projects
 &gt;ls -l
-AAD_demo_processed
+AAD_demo_processed_vsearch
+AAD_demo_processed_dada2
 AAD_demo</code></pre>
-<p>The folder <code>AAD_demo_processed</code> contains an example of the complete execution of AmpliconTagger on a subset of the AAD study (<a href="PMID:30046129" class="uri">PMID:30046129</a>) while the <code>AAD_demo</code> directory contains the raw_reads with other files needed to run the pipeline, but no data processing. In the <code>AAD_demo_processed</code> directory, we have the following files and a <code>raw_reads</code> directory which holds a subset of samples from the AAD project:</p>
+<p>The folders <code>AAD_demo_processed_vsearch</code> and <code>AAD_demo_processed_dada2</code> contain examples of the complete execution of AmpliconTagger on a subset of the AAD study (<a href="PMID:30046129" class="uri">PMID:30046129</a>) executed with a vsearch and dada2 workflow while the <code>AAD_demo</code> directory contains the raw_reads with other files needed to run the pipeline, but no data processing. In the <code>AAD_demo</code> directory, we have the following files and a <code>raw_reads</code> directory which holds a subset of samples from the AAD project:</p>
 <pre><code>root@centos7image:/project/microbiome_genomics/projects$ cd AAD_demo/ 
 root@centos7image:/project/microbiome_genomics/projects/AAD_demo$ ls -l
 total 52
