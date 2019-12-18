@@ -8,7 +8,7 @@ tags : [AmpliconTagger, bioinformatics, high performance computing, metagenomics
 
 
 ## AmpliconTagger pipeline
-It was a long road, but our marker genes pipeline is finally published in [GigaScience](https://academic.oup.com/gigascience/article/8/12/giz146/5670612) and I thought it would be interesting to provide a little historical background on its development.
+It was a long road, but our marker gene pipeline is finally published in [GigaScience](https://academic.oup.com/gigascience/article/8/12/giz146/5670612) and I thought it would be interesting to provide a little historical background on its development.
 
 ![Timeline](/images/post_2019-12-12.png)
 
