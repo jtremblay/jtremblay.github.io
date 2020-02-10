@@ -278,9 +278,15 @@ h1, h2, .h1, .h2 {
     /*font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;*/
     //font-family: "Archivo Black";
     font-family: "Small Pixel";
-    font-weight: 500;
+    font-weight: 800;
     line-height: 1.1;
     color: inherit;
+}
+h1, .h1{
+    background: -webkit-linear-gradient(45deg, #e81600, #3062c8);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                        
 }
 
 h3, h4, h5, h6, .h3, .h4, .h5, .h6 {
