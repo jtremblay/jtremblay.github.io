@@ -1,10 +1,9 @@
 ---
 layout: page
-title:
+title: the microbiome data lab
 tagline: 
 ---
 
-![logo](/images/logo1.png)
 
 {% include JB/setup %}
 

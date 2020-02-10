@@ -276,7 +276,8 @@ hr {
 
 h1, h2, .h1, .h2 {
     /*font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;*/
-    font-family: "Archivo Black";
+    //font-family: "Archivo Black";
+    font-family: "Small Pixel";
     font-weight: 500;
     line-height: 1.1;
     color: inherit;
@@ -1682,6 +1683,10 @@ input[type="submit"].btn-block, input[type="reset"].btn-block, input[type="butto
 @font-face {
     font-family: 'Archivo Black';
     src: url('/fonts/ArchivoBlack/ArchivoBlack-Regular.ttf');
+}
+@font-face {
+    font-family: 'Small Pixel';
+    src: url('/fonts/SmallPixel/small_pixel-7.ttf');
 }
 .glyphicon {
     position: relative;
