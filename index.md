@@ -1,8 +1,11 @@
 ---
 layout: page
-title: the microbiome data lab
+title:
 tagline: 
 ---
+
+![logo](/images/logo1.png)
+
 {% include JB/setup %}
 
 <p>I am a bioinformatics data scientist. My interests are in microbiome genomics R&D and in developing end-to-end bioinformatics pipelines geared for environmental genomics data. I also develop visualization supports applied to various kind of data.</p>
