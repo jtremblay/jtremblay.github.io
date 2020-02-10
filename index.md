@@ -1,12 +1,11 @@
 ---
 layout: page
-title: Microbiome lounge
+title: the microbiome data lab
 tagline: 
 ---
 {% include JB/setup %}
 
-<p>I am a Bioinformatics Scientist - currently a <a href="http://www.nrc-cnrc.gc.ca/eng/people/tremblay_julien_21216.html">Research Officer at the National Research Council Canada</a>. My interests are in microbiome genomics R&D and in
-    developing end-to-end bioinformatics pipelines geared for environmental genomics data</p>
+<p>I am a bioinformatics data scientist. My interests are in microbiome genomics R&D and in developing end-to-end bioinformatics pipelines geared for environmental genomics data. I also develop visualization supports applied to various kind of data.</p>
 
   <p><a href='https://linkedin.com/in/julien-tremblay-32b88835'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a>
     <a href='https://scholar.google.ca/citations?user=sbA3Bh8AAAAJ&hl=en&oi=ao'><img src='images/gscholar.png' alt='gscholar' width='42' height='42'></a>
