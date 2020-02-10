@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <script src="jquery.min.js"></script>
+    <script src="popper.min.js"></script>
+    <script src="bootstrap.min.js"></script>
+    <script src="isotope.pkgd.min.js"></script>
+    <script src="d3.v5.js"></script>
+    <script src="areaCharts.js"></script>
+    <script src="barChart.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Monofett&display=swap" rel="stylesheet"> 
+    <link rel="stylesheet" href="prenomsqc.css"></script>
+
+</head>
+
+<body>
+    <div class="container-fluid" style="margin-left:60px; margin-right:60px;width:auto">
+        <div class="page-header" style="margin-top:50px">
+            <img src="fr.png" style="width:40px;height:40px;">
+            <h4>Les 100 prénoms les plus populaires dans la province de Québec entre 1980 et 2018.</h4>
+            <p class="custom1">Cette visualisation interactive illustre la distribution des 100 prénoms les plus populaires donnés à la naissance dans la province de Québec entre 1980 et 2018. 
+            Utilisez la souris survoler les graphiques en aires pour illustrer les valeurs d'abondance aux coordonnées du pointeur de la souris. 
+            Le graphique en barre illustre la distribution du prénom qui a été séléctionné (cliqué) sur les graphiques d'aires en barres.
+            Cliquez sur les boutons pour sélectionner/filtrer ou ordonner les figures d'aires. 
+            Source des données: <a href="https://www.donneesquebec.ca/recherche/fr/dataset/banque-de-prenoms-garcons">Données Québec</a></p>
+            <img src="eng.png" style="width:50px;height:50px;">
+            <h5>Top 100 first names in the province of Quebec from 1980 to 2018.</h5>
+            <p class="custom2">This interactive visualization shows the distribution of the top 100 most popular first names give at the time of birth in the province of Quebec from 1980 to 2018.
+            Use the mouse to hover on the area graphs to show abundance values at the coordinates of the mouse pointer.
+            The bar graph shows the name distribution per year for the selected first name selected by clicking on a given area chart.
+            Click on the buttons so select/filter or sort the chart area figures.
+            Data source: <a href="https://www.donneesquebec.ca/recherche/fr/dataset/banque-de-prenoms-garcons">Données Québec</a></p>
+            <p class="custom1">Auteur/Author: Julien Tremblay - jtremblay.github.io</p>
+        </div>
+        <div class="col">
+            <div id="sorts" class="btn-group mx-auto text-center">
+                <button id="btnoriginalorder" type="button" class="btn btn-info btn-sm active" data-sort-by="name">Alhpabétiquement/Alphabetically</button>
+                <button id="btnabundance" type="button" class="btn btn-info btn-sm" data-sort-by="count">Abondance/Abundance</button>
+            </div>
+            <div id="filters" class="btn-group mx-auto text-center">
+                <button id="btnshowall" type="button" class="btn btn-info active btn-sm" data-filter="*" onclick='updateAreaData(".*")'>Montrer tout/Show all</button>
+                <button id="btnA" type="button" class="btn btn-info btn-sm" data-filter="startsWithA" onclick='updateAreaData("A")'>A</button>
+                <button id="btnB" type="button" class="btn btn-info btn-sm" data-filter="startsWithB" onclick='updateAreaData("B")'>B</button>
+                <button id="btnC" type="button" class="btn btn-info btn-sm" data-filter="startsWithC" onclick='updateAreaData("C")'>C</button>
+                <button id="btnD" type="button" class="btn btn-info btn-sm" data-filter="startsWithD" onclick='updateAreaData("D")'>D</button>
+                <button id="btnE" type="button" class="btn btn-info btn-sm" data-filter="startsWithE" onclick='updateAreaData("E")'>E</button>
+                <button id="btnF" type="button" class="btn btn-info btn-sm" data-filter="startsWithF" onclick='updateAreaData("F")'>F</button>
+                <button id="btnG" type="button" class="btn btn-info btn-sm" data-filter="startsWithG" onclick='updateAreaData("G")'>G</button>
+                <button id="btnH" type="button" class="btn btn-info btn-sm" data-filter="startsWithH" onclick='updateAreaData("H")'>H</button>
+                <button id="btnI" type="button" class="btn btn-info btn-sm" data-filter="startsWithI" onclick='updateAreaData("I")'>I</button>
+                <button id="btnJ" type="button" class="btn btn-info btn-sm" data-filter="startsWithJ" onclick='updateAreaData("J")'>J</button>
+                <button id="btnK" type="button" class="btn btn-info btn-sm" data-filter="startsWithK" onclick='updateAreaData("K")'>K</button>
+                <button id="btnL" type="button" class="btn btn-info btn-sm" data-filter="startsWithL" onclick='updateAreaData("L")'>L</button>
+                <button id="btnM" type="button" class="btn btn-info btn-sm" data-filter="startsWithM" onclick='updateAreaData("M")'>M</button>
+                <button id="btnN" type="button" class="btn btn-info btn-sm" data-filter="startsWithN" onclick='updateAreaData("N")'>N</button>
+                <button id="btnO" type="button" class="btn btn-info btn-sm" data-filter="startsWithO" onclick='updateAreaData("O")'>O</button>
+                <button id="btnP" type="button" class="btn btn-info btn-sm" data-filter="startsWithP" onclick='updateAreaData("P")'>P</button>
+                <button id="btnQ" type="button" class="btn btn-info btn-sm" data-filter="startsWithQ" onclick='updateAreaData("Q")'>Q</button>
+                <button id="btnR" type="button" class="btn btn-info btn-sm" data-filter="startsWithR" onclick='updateAreaData("R")'>R</button>
+                <button id="btnS" type="button" class="btn btn-info btn-sm" data-filter="startsWithS" onclick='updateAreaData("S")'>S</button>
+                <button id="btnT" type="button" class="btn btn-info btn-sm" data-filter="startsWithT" onclick='updateAreaData("T")'>T</button>
+                <button id="btnU" type="button" class="btn btn-info btn-sm" data-filter="startsWithU" onclick='updateAreaData("U")'>U</button>
+                <button id="btnV" type="button" class="btn btn-info btn-sm" data-filter="startsWithV" onclick='updateAreaData("V")'>V</button>
+                <button id="btnW" type="button" class="btn btn-info btn-sm" data-filter="startsWithW" onclick='updateAreaData("W")'>W</button>
+                <button id="btnX" type="button" class="btn btn-info btn-sm" data-filter="startsWithX" onclick='updateAreaData("X")'>X</button>
+                <button id="btnY" type="button" class="btn btn-info btn-sm" data-filter="startsWithY" onclick='updateAreaData("Y")'>Y</button>
+                <button id="btnZ" type="button" class="btn btn-info btn-sm" data-filter="startsWithZ" onclick='updateAreaData("Z")'>Z</button>
+            </div>
+            <div id="filtersSex" class="btn-group mx-auto text-center">
+                <button id="btnSexM" type="button" class="btn btn-info active btn-sm" onclick='updateAreaDataBySex("M")'>Gars/Boys</button>
+                <button id="btnSexF" type="button" class="btn btn-info btn-sm" onclick='updateAreaDataBySex("F")'>Filles/Girls</button>
+            </div>
+            <select id="json_sources" name="json_sources">
+                <option value ="gars_filles_1980-2018_parsed.csv" selected>Most popular between 1980-2018</option>
+                <option value ="gars_filles_1980-2018_parsed_pop2008-2018.csv">Most popular between 2008-2018</option>
+            </select>
+            <div id="year"></div>
+        </div> 
+    <!-- Create a div where the graph will take place -->
+	<div id="vizBarChart"></div>
+    <div id="viz"></div>
+
+    </div>
+    <script>
+
+var updatableBarChart;
+var updatableAreaCharts;
+var updateAreaData;
+var updateAreaDataBySex;
+var matches = [];
+var selectedSex;
+var selectedLetter = ".*";
+var $grid;
+var filterFns, filterFnsSex;
+var dropdown = d3.select("#json_sources");
+var k = 0;
+var change = function() {
+    var source = dropdown.node().options[dropdown.node().selectedIndex].value;
+   
+    if(k != 0){
+        const myNode = document.getElementById("viz");
+        myNode.innerHTML = '';
+        const myNode2 = document.getElementById("vizBarChart");
+        myNode2.innerHTML = '';
+        const myNode3 = document.getElementById("year");
+        myNode3.innerHTML = '';
+        $( ".btn" ).removeClass("active");
+        $('#btnshowall').toggleClass('active');
+        $('#btnoriginalorder').addClass('active');
+        $('#btnabundance').removeClass('active');
+        $('#btnSexM').addClass('active');
+    }
+    
+    //d3.csv("gars_filles_1980-2018_parsed.csv")
+    d3.csv(source)
+        .then(function(data) {
+
+            //console.log("data:");
+            //console.log(data);
+
+            //By Default only show Males
+            let dataMales = data.filter(function(d) {
+                //  console.log(d.key);
+                return d.sex == "M";
+            });
+            
+            //Area Charts
+            //var updatableChart = areaCharts().width(150).height(150).data(data);
+            selectedSex = "M";
+            updatableAreaCharts = areaCharts().data(dataMales);
+          
+            d3.select('#viz')
+               .call(updatableAreaCharts);
+            if(k != 0){
+               $grid.isotope( 'destroy' );
+               doIsotope();
+            }
+            k = 1;
+           
+            //Bar Chart
+            updatableBarChart = barChart().data(dataMales);
+          
+            d3.select('#vizBarChart')
+               .call(updatableBarChart);
+            
+            updatableAreaCharts.on('was_clicked', function(payload){
+                //here payload is the year. eg. 1934
+                var data2 = data.filter(function(d) {
+                    return d.year == payload;
+                });
+                data2 = data2.filter(function(d) {
+                    return d.sex == selectedSex;
+                });
+                
+                if (matches === undefined || matches.length == 0) {
+                    updatableBarChart.data(data2);
+                }else{
+                    var data3 = data2.filter(function (d) {
+                        return matches.indexOf(d.name) >= 0; 
+                    });
+                    updatableBarChart.data(data3);
+                }
+            });
+
+            updateAreaData = function(letter){
+                let data2 = data.filter(function (d) {
+                    return d.sex == selectedSex; 
+                });
+                selectedLetter = letter;
+                data2 = getDataCorrespondingToCurrentNames(data2, selectedLetter);
+                updatableBarChart.data(data2);
+            }
+            
+            updateAreaDataBySex = function(sex){
+                selectedSex = sex;
+                let data2 = data.filter(function (d) {
+                    return d.sex == selectedSex; 
+                });
+
+                updatableAreaCharts.data(data2);
+                $grid.isotope( 'destroy' );
+                doIsotope();
+
+                let currFilterString = "startsWith" + selectedLetter;
+                //console.log("currFilterString: " + currFilterString);
+                let currFilterValue = filterFns[ currFilterString ] || currFilterString;
+                $grid.isotope({ filter: currFilterValue });
+                
+                let data3 = getDataCorrespondingToCurrentNames(data2, selectedLetter);
+                $('#btnabundance').removeClass('active');
+                $('#btnoriginalorder').addClass('active');
+
+                updatableBarChart.data(data3);
+            }
+        })
+        .catch(function(error){
+                // handle error
+                console.log("ERROR");
+                console.log(error);
+        })
+    
+}
+dropdown.on("change", change)
+change();
+
+function getDataCorrespondingToCurrentNames(currData, letter){
+    let pattern = "^"+letter;
+    let re = new RegExp(letter, 'g');
+    
+    let names = currData.map(item => item.name)
+        .filter((value, index, self) => self.indexOf(value) === index);
+
+    matches = names.filter(function(name) {
+        return new RegExp(pattern).test(name);
+    })
+   
+    currData = currData.filter(function (d) {
+        return matches.indexOf(d.name) >= 0; 
+    });
+    currData = currData.filter(function (d) {
+        return d.sex == selectedSex; 
+    });
+    return currData;
+}
+
+//########################
+//## ISOTOPE #############
+//########################
+doIsotope = function(){
+    $grid = $('#viz').isotope({
+        itemSelector: '.chart',
+        layoutMode: 'fitRows',
+        getSortData: {
+            count: function(e) {
+                var d, sum;
+                d = d3.select(e).datum();
+                sum = d3.sum(d.values, function(d) {
+                    return d.n;
+                });
+                return sum * -1; 
+            },
+            name: function(e) {
+                var d;
+                d = d3.select(e).datum();
+                return d.key;
+            }
+        }   
+    });
+  
+    // bind sort button click
+    $('#sorts').on( 'click', 'button', function() {
+        var sortByValue = $(this).attr('data-sort-by');
+        $grid.isotope({ sortBy: sortByValue });
+    });
+
+    // change is-checked class on buttons
+    $('.btn-group').each( function( i, buttonGroup ) {
+        var $buttonGroup = $( buttonGroup );
+        $buttonGroup.on( 'click', 'button', function() {
+            $buttonGroup.find('.active').removeClass('active');
+            $( this ).addClass('active');
+        });
+    });
+    
+    filterFns = {
+        startsWithA: function() {
+            var name = $(this).find('.title').text();
+            var tmpmatch = name.match( /^A.*$/ );
+            //console.log(tmpmatch);
+            return name.match( /^A.*$/ );
+        },
+        startsWithB: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^B.*$/ );
+        },
+        startsWithC: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^C.*$/ );
+        },
+        startsWithD: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^D.*$/ );
+        },
+        startsWithE: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^E.*$/ );
+        },
+        startsWithF: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^F.*$/ );
+        },
+        startsWithG: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^G.*$/ );
+        },
+        startsWithH: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^H.*$/ );
+        },
+        startsWithI: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^I.*$/ );
+        },
+        startsWithJ: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^J.*$/ );
+        },
+        startsWithK: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^K.*$/ );
+        },
+        startsWithL: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^L.*$/ );
+        },
+        startsWithM: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^M.*$/ );
+        },startsWithN: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^N.*$/ );
+        },startsWithO: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^O.*$/ );
+        },startsWithP: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^P.*$/ );
+        },startsWithQ: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^Q.*$/ );
+        },startsWithR: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^R.*$/ );
+        },startsWithS: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^S.*$/ );
+        },startsWithT: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^T.*$/ );
+        },startsWithU: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^U.*$/ );
+        },startsWithV: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^V.*$/ );
+        },startsWithW: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^W.*$/ );
+        },startsWithX: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^X.*$/ );
+        },startsWithY: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^Y.*$/ );
+        },startsWithZ: function() {
+            var name = $(this).find('.title').text();
+            return name.match( /^Z.*$/ );
+        }
+    };
+
+    // bind filter button click
+    $('#filters').on( 'click', 'button', function() {
+        var filterValue = $( this ).attr('data-filter');
+        // use filterFn if matches value
+        console.log("Inside Isotope filter binding button: ");
+        console.log(filterValue);
+        filterValue = filterFns[ filterValue ] || filterValue;
+        $grid.isotope({ filter: filterValue });
+    });
+}
+  
+    </script>
+
+    <!-- DISQUS -->
+    <div id="disqus_thread"></div>
+        <script type="text/javascript">
+    
+            var disqus_shortname = 'microbiomelounge'; // required: replace example with your forum shortname
+    
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function() {
+                var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+                dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+        <a href="http://disqus.com" class="dsq-brlink">blog comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
+</body>
+
+</html>

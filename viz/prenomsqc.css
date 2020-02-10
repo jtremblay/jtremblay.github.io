@@ -1,0 +1,90 @@
+body{
+    background-color:#e9ecef;
+    //background-color:#a3a3c2;
+}
+#year{
+    font-family: 'Monofett', cursive;
+    //text-align: center;
+    font-size:40px;
+    font-color:#3973ac;
+}
+.custom1 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: black;
+    font-size: 12px;
+}
+.custom2 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: black;
+    font-size: 12px;
+}
+.h5{
+    font-size:11px;
+}
+.chart {
+  float: left;
+  padding-right: 5px;
+  padding-bottom: 5px;
+  padding-top:0;
+  padding-left:0;
+}
+.display-bar{
+    fill: #e68a00;
+}
+
+.hidden {
+  display:none;
+  opacity: 0.0;
+}
+
+.static_year{
+    font: 9px sans-serif;
+    font-weight: bold;
+}
+
+.title{
+    text-align: center;
+    font: 11px sans-serif;
+    font-weight: bold;
+}
+.sexF{
+    text-align: center;
+    font: 14px sans-serif;
+    font-weight: bold;
+}
+.sexM{
+    text-align: center;
+    font: 14px sans-serif;
+    font-weight: bold;
+}
+.title-bar-chart{
+    font-family: 'Monofett', cursive;
+    text-align: center;
+    font-size:40px;
+    color:#3973ac;
+    //font: 14px sans-serif;
+    //font-weight: bold;
+}
+div.tooltip {   
+    //position: absolute;         
+    //text-align: center;         
+    //width: 60px;                    
+    //height: 28px;
+    color: white; 
+    padding: 6px;               
+    font: 12px sans-serif;      
+    background: rgba(0, 0, 0, 0.7);
+    //border: 0px;        
+    border-radius: 4px;         
+    pointer-events: none;           
+}
+/*
+div.tooltip{
+    line-height: 1;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border-radius: 4px;
+    font-size: 12px;
+}
+*/
