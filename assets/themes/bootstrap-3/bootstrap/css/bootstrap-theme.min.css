@@ -440,6 +440,11 @@
     background-image: url(/images/6.png);
 }
 
+.ch-img-6 {
+    background-image: url(/images/viz.png);
+}
+
+
 .ch-info h3 {
     color: #fff;
     text-transform: uppercase;
