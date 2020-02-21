@@ -83,7 +83,6 @@ data.forEach(function(d) { // Make every date in the csv data a javascript date 
    var aDate = new Date(d.date);
    d.date = aDate;
 });
-//console.log(data);
 
 var taxa = data.map(function (d){
     return d.taxon
@@ -93,11 +92,10 @@ taxa = taxa.filter(onlyUniqueArray);
 var dates = data.map(function (d){
     return d.dates
 });
-//console.log(taxa);
 
 var dataNested = d3.nest() // nest function allows to group the calculation per level of a factor
    .key(function(d) { return d.condition;})
-   //.key(function(d) { return d.taxon;})
+   .key(function(d) { return d.taxon;})
    .entries(data);
 
 console.log(dataNested);
@@ -125,7 +123,6 @@ var svg = dom.selectAll("multipleLineCharts")
        .attr("height", height + margin.top + margin.bottom)
    .append("g")
        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-       //.attr("fake", function(d) {console.log("d inside svg:"); console.log(d);})
 
 // Add X axis --> it is a date format
 var xScale = d3.scaleTime()
@@ -170,7 +167,7 @@ svg
         return d3.line()
             .x(function(d) { return xScale(d.date); })
             .y(function(d) { return yScale(d.abundance); })
-            (d.values);
+            (data);
     })
 
 
