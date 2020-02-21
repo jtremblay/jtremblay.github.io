@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<title>Issues Ratings</title>
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line, 
+.axis1 path,
+.axis1 line {
+  fill: none;
+  stroke: #E6E7E8;
+  shape-rendering: crispEdges;
+}
+
+
+.line {
+  fill: none;
+  stroke-width: 1.5px;
+}
+
+.legend-box {
+  cursor: pointer;  
+}
+
+#mouse-tracker {
+  stroke: #E6E7E8;
+  stroke-width: 1px;
+}
+
+.hover-line { 
+  stroke: #E6E7E8;
+  fill: none;
+  stroke-width: 1px;
+  left: 10px;
+  shape-rendering: crispEdges;
+  opacity: 1e-6;
+}
+
+.hover-text {
+  stroke: none;
+  font-size: 30px;
+  font-weight: bold;
+  fill: #000000;
+}
+
+.tooltip {
+  font-weight: normal;
+}
+
+.brush .extent {
+  stroke: #FFF;
+  shape-rendering: crispEdges;
+}
+
+</style>
+</head>
+<body>
+<div id="viz"></div>
+<script src="d3.v5.js"></script>
+<script>
+var s = `condition,taxon,abundance,date
+condition01,speciesA,0.31,2017-04-13
+condition01,speciesA,0.54,2017-04-20
+condition01,speciesB,0.21,2017-04-13
+condition01,speciesB,0.60,2017-04-20
+condition02,speciesA,0.31,2017-04-13
+condition02,speciesA,0.48,2017-04-20
+condition02,speciesB,0.19,2017-04-13
+condition02,speciesB,0.61,2017-04-20
+condition03,speciesA,0.13,2017-04-13
+condition03,speciesA,0.11,2017-04-20
+condition03,speciesB,0.04,2017-04-13
+condition03,speciesB,0.11,2017-04-20
+`;
+
+var data = d3.csvParse(s);
+data.forEach(function(d) { // Make every date in the csv data a javascript date object format
+   var aDate = new Date(d.date);
+   d.date = aDate;
+});
+//console.log(data);
+
+var taxa = data.map(function (d){
+    return d.taxon
+});
+taxa = taxa.filter(onlyUniqueArray);
+
+var dates = data.map(function (d){
+    return d.dates
+});
+//console.log(taxa);
+
+var dataNested = d3.nest() // nest function allows to group the calculation per level of a factor
+   .key(function(d) { return d.condition;})
+   //.key(function(d) { return d.taxon;})
+   .entries(data);
+
+console.log(dataNested);
+var fillColors = ["#0000CD", "#00FF00", "#FF0000", "#808080"]
+
+// color palette
+var color = d3.scaleOrdinal()
+    .domain(taxa)
+    .range(fillColors);
+
+//Margins
+var margin =  { top: 20,  right: 20, bottom: 60, left: 50},
+        width = 500 - margin.left - margin.right,
+        height = 300 - margin.top - margin.bottom;
+
+// Define dom and svg
+var dom = d3.select("#viz");
+var svg = dom.selectAll("multipleLineCharts")
+   .data(dataNested)
+   .enter()
+   .append("div")
+   .attr("class", "chart")
+   .append("svg")
+       .attr("width", width + margin.left + margin.right)
+       .attr("height", height + margin.top + margin.bottom)
+   .append("g")
+       .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+       //.attr("fake", function(d) {console.log("d inside svg:"); console.log(d);})
+
+// Add X axis --> it is a date format
+var xScale = d3.scaleTime()
+        .rangeRound([0, width])
+xScale.domain(d3.extent(data, function(d) {return d.date; }));
+
+svg
+    .append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .attr("class", "x axis")
+    .call(d3.axisBottom(xScale))
+    .selectAll("text")
+    .style("text-anchor", "end")
+    .attr("transform", "rotate(-90)")
+    .attr("dx", "-0.8em")
+    .attr("dy", "-0.45em")
+   
+//Add Y axis - Here because we want all panels to be on same scale, we cant use the dates from the global data structure.
+var yScale = d3.scaleLinear()
+    .domain([
+        d3.min(data, function(d) { return d.abundance; } ),
+        d3.max(data, function(d) { return d.abundance; } )
+    ])
+    .range([ height, 0 ]);
+
+svg.append("g")
+    .attr("class", "y axis")
+    .call(d3.axisLeft(yScale).ticks(5));
+
+//Add Z scale (colors)
+var zScale = d3.scaleOrdinal()
+    .range(fillColors);
+zScale.domain(taxa);
+
+
+// generate lines.
+svg
+    .append("path")
+    .attr("class", "line")
+    .style("stroke", function(d) { return zScale(d.key); })
+    .attr("d", function(d, i){
+        return d3.line()
+            .x(function(d) { return xScale(d.date); })
+            .y(function(d) { return yScale(d.abundance); })
+            (d.values);
+    })
+
+
+/* Util functions */
+function onlyUniqueArray(value, index, self) {
+    return self.indexOf(value) === index;
+}
+
+
+</script>
+</html>
