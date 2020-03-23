@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+	<meta charset="UTF-8">
+	<title>Taxonomy stacked bar charts</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">-->
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="myStyle.css">
+    <script src="jquery.min.js"></script>
+    <script src="popper.min.js"></script>                                                                 
+    <!--<script src="bootstrap.bundle.min.js"</script>-->
+    <!--<script src="bootstrap.bundle.js"</script>-->
+    <script src="bootstrap.min.js"></script>      
+    <script src="isotope.pkgd.min.js"></script>
+    <!-- Load d3.js -->                                                  
+    <!--<script src="https://d3js.org/d3.v5.js"></script>-->
+    <script src="d3.v5.js"></script>
+    <script src="taxonomyCharts.js"></script>
+    <!-- <script src="lineChartsMultiplePanels_v5.js"></script> -->
+    <script src="packery.pkgd.min.js"></script>
+    <script src="draggabilly.pkgd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Monofett&display=swap" rel="stylesheet"> 
+    <script src="myIsotopeBars.js"></script>
+    <script src="myPackeryBars.js"></script>
+
+    <style>
+    </style>
+
+</head>
+<body>
+<div class="container-fluid" style="margin-left:60px; margin-right:60px;width:1440px">
+  <div class="page-header" style="margin-top:50px">
+      <h5>Interactive taxonomic stacked bar charts.</h5>
+      <p class="custom1">
+        In a recent publication <a href="https://www.mdpi.com/2076-2607/7/12/595">(Drouin et al., (2019), Microorganisms; PMID:31766494)</a>, we reported kinetics of microbial communities in silage environments:
+      <p>
+      <div class="row">
+        <div class="col"> 
+          <p class="custom2">BACKGROUND:</p>
+          <p class="custom1">
+          It was already known that lactic acid bacteria (LAB), when used as silage additives were shown to improve several fermentation parameters, including aerobic stability. 
+          Previous experiments shown that inoculation with a combination of Lactobacillus buchneri NCIMB40788 and Lactobacillus hilgardii CNCM-I-4785, contributes to an increase in aerobic stability, compared to each strain inoculated independently.</p>
+        </div>
+        <div class="col"> 
+          <p class="custom2">OBJECTIVES:</p>
+          <p class="custom1">To understand the mode of action of the combination on the LAB community, a fermentation-kinetic study was performed on corn. Four treatments, Control, Lb. buchneri, Lb. hilgardii, and a combination of the two strains, were fermented 1, 2, 4, 8, 16, 32, and 64 days. </p>
+        </div>
+        <div class="col"> 
+          <p class="custom2">HIGHLIGHTS:</p>
+          <p class="custom1">Corn silage inoculated by both strains had a lactate:acetate ratio of 0.59 after 64 days and a higher concentration of lactate than Lb. buchneri.<br>
+            Leuconostocaceae represented the dominant population in the early phase (day 1), with roughly 50% abundance.<br>
+            Lactobacillaceae dominated the succession from day 4 to 64.<br>
+            These results confirm the increased fermentation efficiency when the two Lactobacillus strains are co-inoculated, with Hannaella as the main dominant fungi OTU.
+        </div>
+          </p>
+      </div>
+
+      <p class="custom1">
+          This interactive visualization shows the distribution of the top 20 most abundant fungi taxa in the aforementionned experiment.
+          Use the mouse to hover bar charts to reveal relative abundance of selected taxon. Click on the buttons so select/filter or sort the lines figures.<br>
+          Data source: <a href="https://www.mdpi.com/2076-2607/7/12/595">PMID:31766494</a>
+      </p>
+      <p class="custom2">Author: Julien Tremblay - <a href=https://jtremblay.github.io>jtremblay.github.io</a></p>
+  </div>
+  <div class="col">
+      <div id="sorts" class="btn-group mx-auto text-center">
+          <!--<button id="btnoriginalorder" type="button" class="btn btn-info active btn-sm" data-sort-by="original-order">ORIGINAL ORDER</button>-->
+          <button id="btnoriginalorder" type="button" class="btn btn-info btn-sm active" data-sort-by="name">Name</button>
+          <button id="btnabundance" type="button" class="btn btn-info btn-sm" data-sort-by="count">Abundance</button>
+      </div>
+      <div id="filters" class="btn-group mx-auto text-center">
+          <button id="btnAll" type="button" class="btn btn-info active btn-sm" data-filter="*">Show all</button>
+          <button id="btnFresh" type="button" class="btn btn-info btn-sm" data-filter="isFresh" >Day 0</button>
+          <button id="btnDay1" type="button" class="btn btn-info btn-sm" data-filter="isDay1" >Day 1</button>
+          <button id="btnDay2" type="button" class="btn btn-info btn-sm" data-filter="isDay2" >Day 2</button>
+          <button id="btnDay4" type="button" class="btn btn-info btn-sm" data-filter="isDay4" >Day 4</button>
+          <button id="btnDay8" type="button" class="btn btn-info btn-sm" data-filter="isDay8" >Day 8</button>
+          <button id="btnDay16" type="button" class="btn btn-info btn-sm" data-filter="isDay16" >Day 16</button>
+          <button id="btnDay32" type="button" class="btn btn-info btn-sm" data-filter="isDay32" >Day 32</button>
+          <button id="btnDay64" type="button" class="btn btn-info btn-sm" data-filter="isDay64" >Day 64</button>
+      </div>
+  </div>
+  <br>
+  <!--<div id="viz"></div>-->
+  <div class="row">
+    <div id="vizBars" class="col">
+    </div>
+    <div id="legendArea" class="col">
+    </div>
+  </div>
+  <div class="row">
+    <div id="vizContext" class="col">
+    </div>
+  </div>
+</div>
+
+<!--<script src="crossfilter.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>-->
+<script type="text/javascript">
+    //var $grid;
+    //var $gridp;   
+    //console.log("$grid: ");
+    //console.log($grid);
+    var updatableChart;
+    var original_data;
+    var original_mapping;
+    var order_flag = 0;
+    var colors = [
+                    [   
+                        "#98abb5", "#8a89a6", "#7b6888", "#6b486b", "#a01d56", "#d0743c", "#ff8c00"
+                    ],
+                    [
+                        "#00FF00", "#FF8080", "#FF00FF", "#0000FF", "#808282", "#CCFFFF", "#CCFFCC",
+                        "#99CCFF", "#CC99FF", "#FFCC99", "#3366FF", "#33CCCC", "#99CC00", "#FF99CC",
+                        "#FFCC00"
+                    ],
+                    [
+                        "#0000CD", "#00FF00", "#FF0000", "#808080", "#000000", "#B22222", "#DAA520", 
+                        "#DDA0DD", "#FF00FF", "#00FFFF", "#4682B4", "#E6E6FA", "#FF8C00", "#80008B", 
+                        "#8FBC8F", "#00BFFF", "#FFFF00", "#808000", "#FFCCCC", "#FFE5CC", "#FFFFCC", 
+                        "#E5FFCC", "#CCFFCC", "#CCFFE5", "#CCFFFF", "#CCE5FF", "#CCCCFF", "#E5CCFF", 
+                        "#FFCCFF", "#FFCCE5", "#FFFFFF", "#990000", "#666600", "#006666", "#330066", 
+                        "#A0A0A0", "#99004C"
+                    ]
+    ]
+
+    d3.tsv('otu_table_final_normalized_rel_L6_ITS.txt')
+        .then(function(data) {
+            // First sort matrix according to sum of each taxon, so that we have the most n (default=20) abundant taxa.
+            var keys = data.columns.slice(1);
+            var columns = data.columns.slice(0);
+            
+            for(var key in data){
+                var curr_obj = data[key];
+                for (i = 1, t = 0; i < columns.length; ++i){
+                    t += curr_obj[columns[i]] = +curr_obj[columns[i]];
+                }
+                data[key]['total'] = t;
+            } 
+            data.sort(function(a, b) { return b.total - a.total; });
+                
+            //create backup copy for further data manipulation.
+            original_data = data;
+            data2 = data.slice(0,20);
+            data2['columns'] = columns;
+            console.log("data2:");
+            console.log(data2);
+
+            //Then transform data for D3 stacked bar graph.
+            data3 = processDataForBarChart(data2); 
+        
+            console.log("data3 after processDataForBarChart():");
+            console.log(data3);
+            columns = data3.columns 
+    
+            // Once data3 has been reprocessed, use d3.nest to change structure. But first
+            // we need to open mapping file and integrate mapping file data with the data3 object.
+            // We will by default group the data by Treatment - we assume that there is a column labeled
+            // Treatment in the mapping tsv file.
+            d3.tsv('mapping_file_ITS.tsv')
+                .then(function(mappingData) {
+                    console.log("mapping data:");
+                    console.log(mappingData);
+            
+                    // group the data: I want to draw one line per group
+                    var mappingData2 = d3.nest() // nest function allows to group the calculation per level of a factor
+                        .key(function(d) { return d.Treatment;})
+                        .entries(mappingData);
+                    
+                    console.log("mapping data 2:");
+                    console.log(mappingData2);
+                   
+                    // Once mapping file nested populate data with key (i.e. Treatment) and #SampleID variables.
+                    let merged = [];
+     
+                    for(let i=0; i<data3.length; i++) {
+                        merged.push({
+                            ...data3[i], 
+                            ...(mappingData.find((itmInner) => itmInner.SampleID === data3[i].Sample))}
+                        );
+                    }
+                    console.log("Merged:");
+                    console.log(merged);
+                    
+                    var merged2 = d3.nest() // nest function allows to group the calculation per level of a factor
+                        .key(function(d) { return d.Treatment;})
+                        .entries(merged);
+                    
+                    
+                    console.log("Merged 2:");
+                    console.log(merged2);
+            
+                    merged2['columns'] = columns;
+                                
+                    // Once nested, call chart(s)
+                    // If Stacked bar charts.
+                    updatableChart = barCharts().fillColors(colors[2]).data(merged2);
+                    d3.select('#vizBars').call(updatableChart);
+                    doIsotopeBars();
+                    doPackeryBars();
+                   
+                    // If lines: 
+                    //myLineCharts = lineCharts().data(merged);
+                    //d3.select('#vizLines').call(myLineCharts);
+                    //doPackeryLines(); //not sure if packery is useful in this instance + bug with line shifting from its original position.
+                    //doIsotopeLines();
+
+            })
+            .catch(function(error){
+                // handle error
+                console.log("ERROR");
+                console.log(error); 
+            })
+    })
+    .catch(function(error){
+       // handle error
+       console.log("ERROR");
+       console.log(error); 
+    })
+    
+    function processDataForBarChart(data2){
+        // Get sample names and remove unwanted keys; 
+        var sampleNames = Object.keys(data2[0]);
+        sampleNames.splice( sampleNames.indexOf('Taxon'), 1 )
+        sampleNames.splice( sampleNames.indexOf('total'), 1 )
+
+        var data3 = new Array(sampleNames.length);
+        var taxa_list = {};
+        // loop per sampleNames.
+        for(k=0; k<sampleNames.length; k++){ 
+            currSample = sampleNames[k];
+            var newElement = {};
+            newElement['Sample'] = currSample; 
+
+            for(i=0; i<data2.length; i++){
+                var abundance = ((data2[i][currSample]) * 100 / 100).toFixed(2);
+                var taxon = data2[i]['Taxon'];
+                taxa_list[taxon] = 1;
+                newElement[taxon] = abundance; 
+            }
+            data3[k] = newElement;
+        }
+    
+        taxa_list = Object.keys(taxa_list);
+        taxa_list.unshift("Taxon");
+        //console.log("taxa_list:");
+        //console.log(taxa_list);
+        data3['columns'] = taxa_list;
+        
+        var columns = taxa_list;
+        // add total and columns 
+        for(var key in data3){
+            if(key != 'columns'){
+                var curr_obj = data3[key];
+                for (i = 1, t = 0; i < columns.length; ++i){
+                    t += curr_obj[columns[i]] = +curr_obj[columns[i]];
+                }
+                data3[key]['total'] = t;
+            }
+        } 
+        data3.sort(function(a, b) { return b.total - a.total; });
+        return data3;
+    }     
+        
+    // Other functions
+    function addPoint(){
+        var newX = document.getElementById("valueX").value;
+        var newY = document.getElementById("valueY").value;
+        console.log("newX: " + newX);
+        console.log("newY: " + newY);
+        //data.push({
+        //    x: newX,
+        //    y: newY
+        //});
+        var random = Math.abs(d3.randomNormal(3,10)());
+
+        /*
+        data.push({
+            posx: random(),
+            posy: random()
+        });
+        */ 
+        /*
+        milesRun.push(random);
+        console.log(milesRun);
+        area2Chart.data(milesRun);
+        */
+    }
+
+    function removePoint(){
+        /*
+        milesRun.pop();
+        console.log(milesRun);
+        area2Chart.data(milesRun);
+        */
+    }
+    
+    function changeOrder(){
+        original_data = updatableChart.getData();
+        if(order_flag == 0){
+            original_data = original_data.sort(function(a, b) { return a.total - b.total; });
+            order_flag = 1;
+        }else{
+            original_data = original_data.sort(function(a, b) { return b.total - a.total; });
+            order_flag = 0;
+        }
+        //console.log("original_data:");
+        //console.log(original_data);
+        updatableChart.data(original_data)   
+    }
+
+    var k = 0;
+    function changeColors(){
+        k++;
+        console.log("k:" + k);
+        if(k > (colors.length - 1)){
+            k = 0;
+        }
+        updatableChart.fillColors(colors[k]);
+
+    }
+
+</script>
+
+</body>
+</html>
+

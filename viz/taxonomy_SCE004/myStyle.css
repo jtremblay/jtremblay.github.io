@@ -1,0 +1,140 @@
+/* MAIN */
+body {
+  font: 10px sans-serif;
+  background-color:#e9ecef;
+}
+
+.axis path,
+.axis line, 
+.axis1 path,
+.axis1 line {
+  fill: none;
+  stroke: #808080;
+  shape-rendering: crispEdges;
+  stroke-width: 1.5px;
+}
+
+.x.axis path, .x.axis1 path {
+  //display: none;
+  fill: none;
+  stroke: #808080;
+  shape-rendering: crispEdges;
+  stroke-width: 1.5px;
+}
+
+.line {
+  fill: none;
+  stroke-width: 1.5px;
+}
+
+.legend-box {
+  cursor: pointer;  
+}
+
+#mouse-tracker {
+  stroke: #808080;
+  stroke-width: 1.5px;
+}
+
+.hover-line { 
+  stroke: #808080;
+  fill: none;
+  stroke-width: 1px;
+  left: 10px;
+  shape-rendering: crispEdges;
+  opacity: 1e-6;
+}
+
+.hover-text {
+  stroke: none;
+  font-size: 30px;
+  font-weight: bold;
+  fill: #000000;
+}
+
+.tooltip-private {
+  font-weight: normal;
+}
+
+.brush .extent {
+  stroke: #FFF;
+  shape-rendering: crispEdges;
+}
+
+div.tooltip {   
+    //position: absolute;    
+    //text-align: center;    
+    //width: 60px;    
+    //height: 28px;
+    color: white; 
+    padding: 6px;    
+    font: 12px sans-serif;    
+    background: rgba(0, 0, 0, 0.7);
+    //border: 0px;    
+    border-radius: 4px;    
+    pointer-events: none;    
+}
+
+.custom1 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: black;
+    font-size: 12px;
+}
+.custom2 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: black;
+    font-size: 12px;
+    font-weight: 900;
+}
+ul {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: black;
+    font-size: 12px;
+}
+
+/* PACKERY */
+
+.grid {
+  background: #DDD;
+  height: 75%; /* inherit height from body */
+}
+
+/* clear fix */
+.grid:after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+/* ---- .grid-item ---- */
+/*
+.chart {
+  float: left;
+  width: 100px;
+  height: 130px;
+  background: #0D8;
+  border: 2px solid #333;
+  border-color: hsla(0, 0%, 0%, 0.7);
+}
+*/
+
+.element-item--width2 { width: 50px; }
+.element-item--height2 { height: 50px; }
+
+.chart.is-dragging,
+.chart.is-positioning-post-drag {
+  background: #C90;
+  z-index: 2;
+}
+
+.packery-drop-placeholder {
+  outline: 3px dashed hsla(0, 0%, 0%, 0.5);
+  outline-offset: -6px;
+  -webkit-transition: -webkit-transform 0.2s;
+          transition: transform 0.2s;
+}
+.chart:hover {
+  border-color: hsla(0, 0%, 100%, 0.5);
+  cursor: move;
+}
+
