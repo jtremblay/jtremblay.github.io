@@ -1,10 +1,25 @@
 /* MAIN */
 
+
+@font-face {
+    font-family: 'Helvetica Neue';
+    src: url('/fonts/HelveticaNeue/HelveticaNeueMedium.ttf');
+    //font-weight: 900;
+}
+@font-face {
+    font-family: 'Helvetica';
+    src: url('/fonts/Helvetica/Helvetica400.ttf');
+}
+
 body {
-  font: 10px sans-serif;
+  font-family: 'Helvetica Neue';
+  //font: 10px sans-serif;
   background-color:#e9ecef;
 }
 
+.title{
+    font-size:11px;
+}
 .axis path,
 .axis line, 
 .axis1 path,
@@ -84,8 +99,8 @@ div.tooltip {
 .custom2 {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     color: black;
-    font-size: 12px;
-    font-weight: 900;
+    font-size: 14px;
+    font-weight: 400;
 }
 ul {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
