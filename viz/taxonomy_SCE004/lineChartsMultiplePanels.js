@@ -633,8 +633,8 @@ function lineCharts() {
                         .attr("dy", "-0.45em");
                 }
                 //maxY = findMaxY(dataConditions[0].values[0]); // Find max Y rating value categories data with "visible"; true
-                maxY = 0.9;
-                yScale.domain([0,+maxY]); // Redefine yAxis domain based on highest y value of categories data with "visible"; true
+                //maxY = 0.9;
+                //yScale.domain([0,+maxY]); // Redefine yAxis domain based on highest y value of categories data with "visible"; true
               
                 svg.select(".y.axis") // Redraw yAxis
                     .transition()
@@ -670,8 +670,8 @@ function lineCharts() {
                     .attr("dy", "-0.45em");
 
                 //maxY = findMaxY(dataConditions[0].values[0]); // Find max Y rating value categories data with "visible"; true
-                maxY = 0.9;
-                yScale.domain([0,+maxY]); // Redefine yAxis domain based on highest y value of categories data with "visible"; true
+                //maxY = 0.9;
+                //yScale.domain([0,+maxY]); // Redefine yAxis domain based on highest y value of categories data with "visible"; true
               
                 svg.select(".y.axis") // Redraw yAxis
                     .transition()
