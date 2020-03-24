@@ -1,8 +1,8 @@
 /* MAIN */
 
-
+/*
 @font-face {
-    font-family: 'Helvetica Neue';
+    font-family: 'Arial';
     src: url('/fonts/HelveticaNeue/HelveticaNeueMedium.ttf');
     //font-weight: 900;
 }
@@ -10,15 +10,15 @@
     font-family: 'Helvetica';
     src: url('/fonts/Helvetica/Helvetica400.ttf');
 }
-
+*/
 body {
-  font-family: 'Helvetica Neue';
+  font-family: 'Arial';
   //font: 10px sans-serif;
   background-color:#e9ecef;
 }
 
 .title{
-    font-size:11px;
+    font-size:12px;
 }
 .axis path,
 .axis line, 
@@ -92,18 +92,18 @@ div.tooltip {
 }
 
 .custom1 {
-    font-family: "Helvetica Neue";
+    font-family: "Arial";//, Helvetica, Arial, sans-serif;
     color: black;
     font-size: 12px;
 }
 .custom2 {
-    font-family: "Helvetica Neue";
+    font-family: "Arial";//, Helvetica, Arial, sans-serif;
     color: black;
     font-size: 14px;
     font-weight: 400;
 }
 ul {
-    font-family: "Helvetica Neue";
+    font-family: "Arial";//, Helvetica, Arial, sans-serif;
     color: black;
     font-size: 12px;
 }
