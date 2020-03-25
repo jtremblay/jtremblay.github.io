@@ -143,6 +143,12 @@ function lineCharts() {
     var parseDate = d3.timeFormat("%Y-%m-%d");
     var convertToDate = d3.timeParse("%Y-%m-%d");
     var formatYear = d3.timeParse("%Y");
+    
+    var selectedTaxa = [
+        "k__Bacteria; p__Firmicutes; c__Clostridia; o__Clostridiales; f__Lachnospiraceae; g__Coprococcus",
+        "k__Bacteria; p__Proteobacteria; c__Gammaproteobacteria; o__Enterobacteriales; f__Enterobacteriaceae;Other",
+        "k__Bacteria; p__Proteobacteria; c__Gammaproteobacteria; o__Enterobacteriales; f__Enterobacteriaceae; g__EnterobacteriaceaeFA"
+    ]
 
     function chart(selection){
         selection.each(function () {
@@ -168,7 +174,7 @@ function lineCharts() {
             var dataLegend = taxa.map(function(d){
                 return{
                     key : d,
-                    visible : ( (d === "k__Bacteria; p__Proteobacteria; c__Gammaproteobacteria; o__Enterobacteriales; f__Enterobacteriaceae; g__EnterobacteriaceaeFA" || d === "k__Bacteria; p__Proteobacteria; c__Gammaproteobacteria; o__Enterobacteriales; f__Enterobacteriaceae;Other") ? true : false)
+                    visible : (selectedTaxa.indexOf(d) != -1 ? true : false)
                 }
             });
             //console.log("dataLegend:");console.log(dataLegend);
@@ -184,8 +190,7 @@ function lineCharts() {
                     obj.timepoint = d.TimePoint;
                     obj.sample = d.Sample;
                     obj.date = d.Date;
-                    //obj.visible = (taxon === "k__Bacteria; p__Firmicutes; c__Bacilli; o__Lactobacillales; f__Lactobacillaceae; g__LactobacillaceaeFA" ? true : false);
-                    obj.visible = ( (taxon === "k__Bacteria; p__Proteobacteria; c__Gammaproteobacteria; o__Enterobacteriales; f__Enterobacteriaceae; g__EnterobacteriaceaeFA" || taxon === "k__Bacteria; p__Proteobacteria; c__Gammaproteobacteria; o__Enterobacteriales; f__Enterobacteriaceae;Other") ? true : false)
+                    obj.visible = (selectedTaxa.indexOf(taxon) != -1 ? true : false);
                     dataAll.push(obj);
                 });
             });
@@ -219,9 +224,7 @@ function lineCharts() {
             //Add visible key.
             dataNested.map(function(d){
                 d.values.map(function(d2){
-                    d2.visible = ( (d2.key === "k__Bacteria; p__Proteobacteria; c__Gammaproteobacteria; o__Enterobacteriales; f__Enterobacteriaceae; g__EnterobacteriaceaeFA" || d2.key === "k__Bacteria; p__Proteobacteria; c__Gammaproteobacteria; o__Enterobacteriales; f__Enterobacteriaceae;Other") ? true : false);
-                    //visible : ( (d === "k__Bacteria; p__Firmicutes; c__Bacilli; o__Lactobacillales; f__Lactobacillaceae; g__LactobacillaceaeFA" || d === "k__Fungi; p__Ascomycota; c__Dothideomycetes; o__Pleosporales; f__Leptosphaeriaceae; g__Neosetophoma") ? true : false)
-                        //console.log(d2);
+                    d2.visible = (selectedTaxa.indexOf(d2.key) != -1 ? true : false); 
                 });
             });
      
