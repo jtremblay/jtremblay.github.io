@@ -2,7 +2,7 @@
 <html>
 <head lang="en">
 	<meta charset="UTF-8">
-	<title>Taxonomy stacked bar charts</title>
+	<title>Taxonomy line charts</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">-->
     <link rel="stylesheet" href="bootstrap.min.css">
@@ -17,23 +17,24 @@
     <!--<script src="https://d3js.org/d3.v5.js"></script>-->
     <script src="d3.v5.js"></script>
     <script src="taxonomyCharts.js"></script>
-    <!-- <script src="lineChartsMultiplePanels_v5.js"></script> -->
+    <script src="lineChartsMultiplePanels.js"></script>
     <script src="packery.pkgd.min.js"></script>
     <script src="draggabilly.pkgd.min.js"></script>
     <link href="https://fonts.googleapis.com/css?family=Monofett&display=swap" rel="stylesheet"> 
-    <script src="myIsotopeBars.js"></script>
-    <script src="myPackeryBars.js"></script>
+    <script src="myIsotopeLines.js"></script>
+    <script src="myPackeryLines.js"></script>
 
-    <style>
-    </style>
+    	<style>
 
+
+
+
+    	</style>
 </head>
 <body>
-<div class="container-fluid" style="margin-left:60px; margin-right:60px;width:1440px">
+<div class="container-fluid" style="margin-left:60px; margin-right:60px;width:1420px">
   <div class="page-header" style="margin-top:50px">
-      <p class="customhead">
-        Interactive taxonomic stacked bar charts.
-      </p>
+      <h5>Interactive taxonomic abundance line chart over a time-course.</h5>
       <p class="custom1">
         In a recent publication <a href="https://www.mdpi.com/2076-2607/7/12/595">(Drouin et al., (2019), Microorganisms; PMID:31766494)</a>, we reported kinetics of microbial communities in silage environments:
       <p>
@@ -55,16 +56,13 @@
             Lactobacillaceae dominated the succession from day 4 to 64.<br>
             These results confirm the increased fermentation efficiency when the two Lactobacillus strains are co-inoculated, with Hannaella as the main dominant fungi OTU.
         </div>
-          </p>
+          </br>
       </div>
-
-      <p class="custom3">
+      <p class="custom1">
           This interactive visualization shows the distribution of the top 20 most abundant bacterial taxa in the aforementionned experiment.
-          Use the mouse to hover bar charts to reveal relative abundance of selected taxon. 
-          <br><b><u>Click on the buttons and checkboxes to select/filter or sort the bar panels.</u></b>
-          <br><b><u>Click on legend boxes to sort the taxa bars according to their abundance.</u></b>
-          <br><b><u>Click on the bar panels to drag and drop panels.</u></b>
-          <br>Data source: <a href="https://www.mdpi.com/2076-2607/7/12/595">PMID:31766494</a>
+          Use the mouse to show/hide the availale taxa in the legend. Also use the gray bar at the bottom of the figure to zoom in a given period of time.
+          Click on the buttons so select/filter or sort the lines figures.
+          Data source: <a href="https://www.mdpi.com/2076-2607/7/12/595">PMID:31766494</a>
       </p>
       <p class="custom2">Author: Julien Tremblay - <a href=https://jtremblay.github.io>jtremblay.github.io</a></p>
   </div>
@@ -74,39 +72,17 @@
           <button id="btnoriginalorder" type="button" class="btn btn-info btn-sm active" data-sort-by="name">Name</button>
           <button id="btnabundance" type="button" class="btn btn-info btn-sm" data-sort-by="count">Abundance</button>
       </div>
-
-      <div id="filters" class="btn-group">
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Fresh" id="btnFresh">Day 0</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day1" id="btnDay1">Day 1</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day2" id="btnDay2">Day 2</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day4" id="btnDay4">Day 4</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day8" id="btnDay8">Day 8</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day16" id="btnDay16">Day 16</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day32" id="btnDay32">Day 32</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day64" id="btnDay64">Day 64</input>
-          </label>
+      <div id="filters" class="btn-group mx-auto text-center">
+          <button id="btnshowall" type="button" class="btn btn-info active btn-sm" data-filter="*">Show all</button>
+          <button id="btnControl" type="button" class="btn btn-info btn-sm" data-filter="isControl" >Control (no probiotic)</button>
+          <button id="btnLb" type="button" class="btn btn-info btn-sm" data-filter="isLb" >With probiotic (L. buchneri)</button>
+          <button id="btnLh" type="button" class="btn btn-info btn-sm" data-filter="isLh" >With probiotic (L. hilgardii)</button>
+          <button id="btnLbLh" type="button" class="btn btn-info btn-sm" data-filter="isLbLh" >With both probiotics (L. buchneri + L.hilgardii)</button>
       </div>
-
   </div>
-  <br>
   <!--<div id="viz"></div>-->
   <div class="row">
-    <div id="vizBars" class="col">
+    <div id="vizLines" class="col">
     </div>
     <div id="legendArea" class="col">
     </div>
@@ -216,17 +192,16 @@
                     merged2['columns'] = columns;
                                 
                     // Once nested, call chart(s)
-                    // If Stacked bar charts.
+                    // draw chart in here! Keep only the most 20 abundant here:
                     updatableChart = barCharts().fillColors(colors[2]).data(merged2);
-                    d3.select('#vizBars').call(updatableChart);
-                    doIsotopeBars();
-                    doPackeryBars();
-                   
-                    // If lines: 
-                    //myLineCharts = lineCharts().data(merged);
-                    //d3.select('#vizLines').call(myLineCharts);
-                    //doPackeryLines(); //not sure if packery is useful in this instance + bug with line shifting from its original position.
-                    //doIsotopeLines();
+                    //d3.select('#viz')
+                    //    .call(updatableChart);
+                    //doIsotope();
+                    myLineCharts = lineCharts().data(merged);
+                    d3.select('#vizLines')
+                        .call(myLineCharts);
+                    //doPackeryLines();
+                    doIsotopeLines();
 
             })
             .catch(function(error){
@@ -344,18 +319,6 @@
     }
 
 </script>
-
-<script>
-   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-   })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-   ga('create', 'UA-75399562-1', 'auto');
-   ga('send', 'pageview');
-
-</script>
-
 
 </body>
 </html>

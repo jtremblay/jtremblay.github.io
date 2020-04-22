@@ -31,9 +31,7 @@
 <body>
 <div class="container-fluid" style="margin-left:60px; margin-right:60px;width:1440px">
   <div class="page-header" style="margin-top:50px">
-      <p class="customhead">
-        Interactive taxonomic stacked bar charts.
-      </p>
+      <h5>Interactive taxonomic stacked bar charts.</h5>
       <p class="custom1">
         In a recent publication <a href="https://www.mdpi.com/2076-2607/7/12/595">(Drouin et al., (2019), Microorganisms; PMID:31766494)</a>, we reported kinetics of microbial communities in silage environments:
       <p>
@@ -58,12 +56,11 @@
           </p>
       </div>
 
-      <p class="custom3">
+      <p class="custom1">
           This interactive visualization shows the distribution of the top 20 most abundant bacterial taxa in the aforementionned experiment.
           Use the mouse to hover bar charts to reveal relative abundance of selected taxon. 
-          <br><b><u>Click on the buttons and checkboxes to select/filter or sort the bar panels.</u></b>
+          <br>Click on the buttons so select/filter or sort the lines figures.
           <br><b><u>Click on legend boxes to sort the taxa bars according to their abundance.</u></b>
-          <br><b><u>Click on the bar panels to drag and drop panels.</u></b>
           <br>Data source: <a href="https://www.mdpi.com/2076-2607/7/12/595">PMID:31766494</a>
       </p>
       <p class="custom2">Author: Julien Tremblay - <a href=https://jtremblay.github.io>jtremblay.github.io</a></p>
@@ -74,34 +71,17 @@
           <button id="btnoriginalorder" type="button" class="btn btn-info btn-sm active" data-sort-by="name">Name</button>
           <button id="btnabundance" type="button" class="btn btn-info btn-sm" data-sort-by="count">Abundance</button>
       </div>
-
-      <div id="filters" class="btn-group">
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Fresh" id="btnFresh">Day 0</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day1" id="btnDay1">Day 1</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day2" id="btnDay2">Day 2</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day4" id="btnDay4">Day 4</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day8" id="btnDay8">Day 8</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day16" id="btnDay16">Day 16</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day32" id="btnDay32">Day 32</input>
-          </label>
-          <label class="btn btn-info btn-sm ">
-              <input type="checkbox"  value=".Day64" id="btnDay64">Day 64</input>
-          </label>
+      <div id="filters" class="btn-group mx-auto text-center">
+          <button id="btnAll" type="button" class="btn btn-info active btn-sm" data-filter="*">Show all</button>
+          <button id="btnFresh" type="button" class="btn btn-info btn-sm" data-filter="isFresh" >Day 0</button>
+          <button id="btnDay1" type="button" class="btn btn-info btn-sm" data-filter="isDay1" >Day 1</button>
+          <button id="btnDay2" type="button" class="btn btn-info btn-sm" data-filter="isDay2" >Day 2</button>
+          <button id="btnDay4" type="button" class="btn btn-info btn-sm" data-filter="isDay4" >Day 4</button>
+          <button id="btnDay8" type="button" class="btn btn-info btn-sm" data-filter="isDay8" >Day 8</button>
+          <button id="btnDay16" type="button" class="btn btn-info btn-sm" data-filter="isDay16" >Day 16</button>
+          <button id="btnDay32" type="button" class="btn btn-info btn-sm" data-filter="isDay32" >Day 32</button>
+          <button id="btnDay64" type="button" class="btn btn-info btn-sm" data-filter="isDay64" >Day 64</button>
       </div>
-
   </div>
   <br>
   <!--<div id="viz"></div>-->

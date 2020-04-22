@@ -40,13 +40,7 @@ function barCharts() {
             svg = dom.selectAll('uniqueChart')
                 .data(data)
                 .enter()
-                .append("div")
-                //.attr("class", "chart")
-                .attr("class", function(d){
-                    let str = d.values[0].TimePoint;
-                    str = str.replace(".", "");
-                    return "chart " + str;
-                })
+                .append("div").attr("class", "chart")
                 .append("svg")
                     .attr("width", width + margin.left + margin.right)
                     .attr("height", height + margin.top + margin.bottom)
@@ -169,7 +163,7 @@ function barCharts() {
                 .attr("text-anchor", "start")
                 .attr("y", -6) 
                 .attr("x", (margin.left * (-1) + 10))
-                .text(function(d){return(d.key)})
+                .text(function(d){ return(d.key)})
                 .style("fill", function(d){ 
                     return "#4682B4";
                 })
@@ -182,8 +176,8 @@ function barCharts() {
                 .attr('height', height + 400)
                 .attr('width', width + 800)
                 .style('fill', "black")
-                .style('font-weight', "600")
-                .style('font-size', "11px")
+                .style('font-weight', "700")
+                .style('font-size', "9px")
             
             // would not work if I would have just wrote: svgLegend.append()... I'm still confused about why... 
             // Here I had to include a var legend ... statement to force embeeding the next appended g into svg class=legend

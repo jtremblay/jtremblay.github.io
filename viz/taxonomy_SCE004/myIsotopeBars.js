@@ -29,58 +29,27 @@ $(document).ready(function() {
             $grid.isotope({ sortBy: sortByValue });
         });
 
-        // change is-checked class on buttons
-        $('.btn-group').each( function( i, buttonGroup ) {
-            var $buttonGroup = $( buttonGroup );
-            $buttonGroup.on( 'click', 'button', function() {
-                $buttonGroup.find('.active').removeClass('active');
-                $( this ).addClass('active');
+     
+        //Checkboxes:
+        // filter with selects and checkboxes
+        var $checkboxes = $('#filters input');
+
+        $checkboxes.change( function() {
+            // map input values to an array
+            var inclusives = [];
+            // inclusive filters from checkboxes
+            $checkboxes.each( function( i, elem ) {
+                // if checkbox, use value if checked
+                console.log(elem);
+                if ( elem.checked ) {
+                    inclusives.push( elem.value );
+                }
             });
-        });
-       
-        //Filter functions 
-        filterFns = {
-            isFresh: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*Fresh*/ );
-            },
-            isDay1: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*Day.1$/ );
-            },
-            isDay2: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*Day.2/ );
-            },
-            isDay4: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*Day.4/ );
-            },
-            isDay8: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*Day.8/ );
-            },
-            isDay16: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*Day.16/ );
-            },
-            isDay32: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*Day.32/ );
-            },
-            isDay64: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*Day.64/ );
-            },
-        };
 
-        // bind filter button click
-        $('#filters').on( 'click', 'button', function() {
-            var filterValue = $( this ).attr('data-filter');
-            // use filterFn if matches value
-            filterValue = filterFns[ filterValue ] || filterValue;
-            $grid.isotope({ filter: filterValue });
-        });
+            // combine inclusive filters
+            var filterValue = inclusives.length ? inclusives.join(', ') : '*';
+            console.log("filterValue: ");console.log(filterValue);
+            $grid.isotope({ filter: filterValue })
+        }); 
     }
-
 });
