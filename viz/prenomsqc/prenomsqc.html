@@ -20,15 +20,15 @@
     <div class="container-fluid" style="margin-left:60px; margin-right:60px;width:auto">
         <div class="page-header" style="margin-top:50px">
             <img src="fr.png" style="width:40px;height:40px;">
-            <h4>Les 100 prénoms les plus populaires dans la province de Québec entre 1980 et 2018.</h4>
-            <p class="custom1">Cette visualisation interactive illustre la distribution des 100 prénoms les plus populaires donnés à la naissance dans la province de Québec entre 1980 et 2018. 
+            <h4>Les 100 prénoms les plus populaires dans la province de Québec entre 1980 et 2019.</h4>
+            <p class="custom1">Cette visualisation interactive illustre la distribution des 100 prénoms les plus populaires donnés à la naissance dans la province de Québec entre 1980 et 2019. 
             Utilisez la souris survoler les graphiques en aires pour illustrer les valeurs d'abondance aux coordonnées du pointeur de la souris. 
             Le graphique en barre illustre la distribution du prénom qui a été séléctionné (cliqué) sur les graphiques d'aires en barres.
             Cliquez sur les boutons pour sélectionner/filtrer ou ordonner les figures d'aires. 
             Source des données: <a href="https://www.donneesquebec.ca/recherche/fr/dataset/banque-de-prenoms-garcons">Données Québec</a></p>
             <img src="eng.png" style="width:50px;height:50px;">
-            <h5>Top 100 first names in the province of Quebec from 1980 to 2018.</h5>
-            <p class="custom2">This interactive visualization shows the distribution of the top 100 most popular first names give at the time of birth in the province of Quebec from 1980 to 2018.
+            <h5>Top 100 first names in the province of Quebec from 1980 to 2019.</h5>
+            <p class="custom2">This interactive visualization shows the distribution of the top 100 most popular first names give at the time of birth in the province of Quebec from 1980 to 2019.
             Use the mouse to hover on the area graphs to show abundance values at the coordinates of the mouse pointer.
             The bar graph shows the name distribution per year for the selected first name selected by clicking on a given area chart.
             Click on the buttons so select/filter or sort the chart area figures.
@@ -74,8 +74,8 @@
                 <button id="btnSexF" type="button" class="btn btn-info btn-sm" onclick='updateAreaDataBySex("F")'>Filles/Girls</button>
             </div>
             <select id="json_sources" name="json_sources">
-                <option value ="gars_filles_1980-2018_parsed.csv" selected>Most popular between 1980-2018</option>
-                <option value ="gars_filles_1980-2018_parsed_pop2008-2018.csv">Most popular between 2008-2018</option>
+                <option value ="gars_filles_1980-2019_parsed.csv" selected>Most popular between 1980-2019</option>
+                <option value ="gars_filles_1980-2019_parsed_pop2008-2019.csv">Most popular between 2008-2019</option>
             </select>
             <div id="year"></div>
         </div> 
@@ -114,7 +114,7 @@ var change = function() {
         $('#btnSexM').addClass('active');
     }
     
-    //d3.csv("gars_filles_1980-2018_parsed.csv")
+    //d3.csv("gars_filles_1980-2019_parsed.csv")
     d3.csv(source)
         .then(function(data) {
 
