@@ -7,10 +7,10 @@ tagline:
 
 {% include JB/setup %}
 
+<a href='https://jtremblay.github.io'><img src='images/logo2.png' alt='sitelogo' width='1' height='1'></a>
 <p>I am a bioinformatics data scientist. My interests are in microbiome genomics R&D and in developing end-to-end bioinformatics pipelines geared for environmental genomics data. I also develop visualization supports applied to various kind of data.</p>
 
   <p>
-    <a href='https://jtremblay.github.io'><img src='images/logo2.png' alt='sitelogo' width='0' height='0'></a>
     <a href='https://linkedin.com/in/julien-tremblay-32b88835'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a>
     <a href='https://scholar.google.ca/citations?user=sbA3Bh8AAAAJ&hl=en&oi=ao'><img src='images/gscholar.png' alt='gscholar' width='42' height='42'></a>
     <a href='https://twitter.com/julio_514'><img src='images/twitter.png' alt='twitter' width='42' height='42'></a>
