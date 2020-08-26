@@ -29,42 +29,27 @@ $(document).ready(function() {
             $grid.isotope({ sortBy: sortByValue });
         });
 
-        // change is-checked class on buttons
-        $('.btn-group').each( function( i, buttonGroup ) {
-            var $buttonGroup = $( buttonGroup );
-            $buttonGroup.on( 'click', 'button', function() {
-                $buttonGroup.find('.active').removeClass('active');
-                $( this ).addClass('active');
+     
+        //Checkboxes:
+        // filter with selects and checkboxes
+        var $checkboxes = $('#filters input');
+
+        $checkboxes.change( function() {
+            // map input values to an array
+            var inclusives = [];
+            // inclusive filters from checkboxes
+            $checkboxes.each( function( i, elem ) {
+                // if checkbox, use value if checked
+                console.log(elem);
+                if ( elem.checked ) {
+                    inclusives.push( elem.value );
+                }
             });
-        });
-       
-        //Filter functions 
-        filterFns = {
-            isVisit2: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*v2/ );
-            },
-            isVisit3: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*v3/ );
-            },
-            isVisit4: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*v4/ );
-            },
-            isVisit5: function() {
-                var name = $(this).find('.title').text();
-                return name.match( /.*v5/ );
-            },
-        };
 
-        // bind filter button click
-        $('#filters').on( 'click', 'button', function() {
-            var filterValue = $( this ).attr('data-filter');
-            // use filterFn if matches value
-            filterValue = filterFns[ filterValue ] || filterValue;
-            $grid.isotope({ filter: filterValue });
-        });
+            // combine inclusive filters
+            var filterValue = inclusives.length ? inclusives.join(', ') : '*';
+            console.log("filterValue: ");console.log(filterValue);
+            $grid.isotope({ filter: filterValue })
+        }); 
     }
-
 });

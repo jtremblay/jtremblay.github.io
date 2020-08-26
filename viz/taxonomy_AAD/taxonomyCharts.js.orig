@@ -12,10 +12,8 @@ function barCharts() {
     var fillColor = 'coral';
     var data = [];
     var margin = {top: 20, right: 10, bottom: 100, left: 40};                                               
-    var width = 350 - margin.left - margin.right;                                                         
-    var height = 200 - margin.top - margin.bottom;
-    var xAxisFontSize = "8px";
-    var legendSpacingBetweenPlotsAndLegend = 650;
+    var width = 300 - margin.left - margin.right;                                                         
+    var height = 200 - margin.top - margin.bottom;                                                        
 
     var updateWidth;
     var updateHeight;
@@ -42,13 +40,7 @@ function barCharts() {
             svg = dom.selectAll('uniqueChart')
                 .data(data)
                 .enter()
-                .append("div")
-                //.attr("class", "chart")
-                .attr("class", function(d){
-                    let str = d.values[0].TimePoint;
-                    str = str.replace(".", "");
-                    return "chart " + str;
-                })
+                .append("div").attr("class", "chart")
                 .append("svg")
                     .attr("width", width + margin.left + margin.right)
                     .attr("height", height + margin.top + margin.bottom)
@@ -80,13 +72,12 @@ function barCharts() {
                 .style("text-anchor", "end")
                 .attr("transform", "rotate(-90)")
                 .style("font-weight", "bold")
-                .style("font-size", xAxisFontSize)
+                .style("font-size", "7px")
                 .attr("dx", "-0.8em")
                 .attr("dy", "-0.45em");
            
             console.log(xScales);
             //console.log(xScales["Control.Day.2"].domain());
-            console.log(xScales[data[0].key].domain());
             // set y scale
             yScale = d3.scaleLinear()
                 .rangeRound([height, 0]);
@@ -172,7 +163,7 @@ function barCharts() {
                 .attr("text-anchor", "start")
                 .attr("y", -6) 
                 .attr("x", (margin.left * (-1) + 10))
-                .text(function(d){return(d.key)})
+                .text(function(d){ return(d.key)})
                 .style("fill", function(d){ 
                     return "#4682B4";
                 })
@@ -183,10 +174,10 @@ function barCharts() {
             svgLegend = domLegend.append("svg")
                 .attr('class', 'legend')
                 .attr('height', height + 400)
-                .attr('width', width + legendSpacingBetweenPlotsAndLegend)
+                .attr('width', width + 700)
                 .style('fill', "black")
-                .style('font-weight', "600")
-                .style('font-size', "11px")
+                .style('font-weight', "700")
+                .style('font-size', "9px")
             
             // would not work if I would have just wrote: svgLegend.append()... I'm still confused about why... 
             // Here I had to include a var legend ... statement to force embeeding the next appended g into svg class=legend
@@ -263,7 +254,7 @@ function barCharts() {
                 console.log("inside update:");console.log(data);
                 keys = data.columns.slice(1);
                 console.log("keys:");console.log(keys);
-                var speed = 1000;
+                var speed = 1100;
             
                 yScale.domain([0, 1]).nice();
                
@@ -294,7 +285,7 @@ function barCharts() {
                             .style("text-anchor", "end")
                             .attr("transform", "rotate(-90)")
                             .style("font-weight", "bold")
-                            .style("font-size", xAxisFontSize)
+                            .style("font-size", "7px")
                             .attr("dx", "-0.8em")
                             .attr("dy", "-0.45em");
                 });
@@ -320,7 +311,9 @@ function barCharts() {
                             .attr("height", d => yScale(d[0]) - yScale(d[1]))
 
                     })
-             };
+                    
+               
+            };
         });
     }
 

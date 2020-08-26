@@ -6,19 +6,30 @@
     src: url('/fonts/HelveticaNeue/HelveticaNeueMedium.ttf');
     //font-weight: 900;
 }
+*/
 @font-face {
     font-family: 'Helvetica';
-    src: url('/fonts/Helvetica/Helvetica400.ttf');
+    src: url('fonts/Helvetica/Helvetica400.ttf');
 }
-*/
+@font-face {
+    font-family: 'HelveticaNeue';
+    src: url('fonts/HelveticaNeue/HelveticaNeueMed.ttf');
+}
+@font-face {
+    font-family: 'HelveticaNeueBd';
+    src: url('fonts/HelveticaNeue/HelveticaNeueBd.ttf');
+}
+
 body {
-  font-family: 'Arial';
+  font-family: 'HelveticaNeue';
   //font: 10px sans-serif;
+  font-size: 10px;
+  font-weight: 500;
   background-color:#e9ecef;
 }
 
 .title{
-    font-size:12px;
+    font-size:11px;
 }
 .axis path,
 .axis line, 
@@ -91,21 +102,40 @@ div.tooltip {
     pointer-events: none;    
 }
 
-.custom1 {
-    font-family: "Arial";//, Helvetica, Arial, sans-serif;
+.customhead {
+    font-family: HelveticaNeueBd, Helvetica, Arial, sans-serif;
     color: black;
-    font-size: 12px;
+    font-size: 20px;
+    font-weight: 500;
+}
+.custom1 {
+    font-family: HelveticaNeue, Helvetica, Arial, sans-serif;
+    color: black;
+    font-size: 14px;
+    font-weight: 500;
 }
 .custom2 {
-    font-family: "Arial";//, Helvetica, Arial, sans-serif;
+    font-family: HelveticaNeueBd, Helvetica, Arial, sans-serif;
     color: black;
     font-size: 14px;
     font-weight: 700;
 }
-ul {
-    font-family: "Arial";//, Helvetica, Arial, sans-serif;
+.custom3 {
+    font-family: HelveticaNeueBd, Helvetica, Arial, sans-serif;
     color: black;
     font-size: 12px;
+    font-weight: 300;
+}
+.btn-sm {
+    font-family: HelveticaNeueBd, Helvetica, Arial, sans-serif;
+    color: black;
+    font-size: 12px;
+    font-weight: 500;
+}
+ul {
+    font-family: HelveticaNeue, Helvetica, Arial, sans-serif;
+    color: black;
+    font-size: 14px;
 }
 
 /* PACKERY */
