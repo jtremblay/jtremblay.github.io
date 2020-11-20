@@ -50,15 +50,15 @@
 
     </style>
 
-<p class="title">AmpliconTagger pipeline - for various types of amplicon sequencing data</p>
+<p class="title">ShotgunMG pipeline - for shotgun metagenomic data</p>
 <p class="text1">Julien Tremblay - julien.tremblay_at_nrc-cnrc.gc.ca</p>
 <p class="text1">Version 1.3.0</p>
 
 <script type="text/javascript">
 
     //Width and height
-    var w = 1700;
-    var h = 800;
+    var w = 3000;
+    var h = 2000;
     var radius = 6;
     var dataset;
     var nodes = [];
@@ -80,7 +80,7 @@
         .attr("fill", "#004C99");
     */
     
-    d3.json("./amplicontagger.json", function(error, json) {
+    d3.json("./shotgunmg.json", function(error, json) {
         if (error) return console.warn(error);
         dataset = json;
         console.log(json)
@@ -95,8 +95,8 @@
                 .nodes(dataset.nodes)
                 .links(dataset.links)
                 .size([w, h])
-                .linkDistance(30)
-                .charge(-300)
+                .linkDistance(40)
+                .charge(-900)
                 .start();
 
         //var colors = d3.scale.category10();
