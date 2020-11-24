@@ -17,8 +17,8 @@ tagline:
     <a href='https://github.com/jtremblay'><img src='images/github.png' alt='github' width='120' height='42'></a>
     <a href='https://bitbucket.org/jtremblay514/'><img src='images/bitbucket_icon.png' alt='bbucket' width='42' height='42'></a>
     <a href='https://hub.docker.com/u/julio514'><img src='images/dockerhub.png' alt='github' width='42' height='42'></a>
-    <a href='https://jtremblay.github.io/amplicontagger.html'><img src='images/amplicontagger_logo.png' alt='amplicontagger' width='179' height='60'></a>
-    <a href='https://jtremblay.github.io/shotgunmg.html'><img src='images/shotgunMG_logo.png' alt='shotgunmg' width='180' height='39'></a>
+    <a href='https://jtremblay.github.io/amplicontagger.html'><img src='images/amplicontagger_logo.png' alt='amplicontagger' width='166' height='23'></a>
+    <a href='https://jtremblay.github.io/shotgunmg.html'><img src='images/shotgunMG_logo.png' alt='shotgunmg' width='156' height='30'></a>
   </p>
 
 
