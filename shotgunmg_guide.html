@@ -1682,8 +1682,7 @@ $(document).ready(function () {
 <a href="#section4">4) End results</a><br />
 <a href="#section5">5) Information regarding the job output folder where standard output and standard error of each job are written</a><br />
 <a href="#section6">6) Integrating more options in a given bioinformatics package</a></p>
-<p>All files being referred to in this document can be found in the companion docker image: <a href="https://cloud.docker.com/u/julio514/repository/docker/julio514/centos" class="uri">https://cloud.docker.com/u/julio514/repository/docker/julio514/centos</a><br />
-The first step should be to install this image on your computer.</p>
+<p>All files being referred to in this document can be found in the companion docker image: <a href="https://cloud.docker.com/u/julio514/repository/docker/julio514/centos" class="uri">https://cloud.docker.com/u/julio514/repository/docker/julio514/centos</a> (Not yet available, TBD) The first step should be to install this image on your computer.</p>
 </div>
 <div id="section1" class="section level1">
 <h1>1- Getting started</h1>
@@ -1694,7 +1693,7 @@ The first step should be to install this image on your computer.</p>
 2) A set of heteregenous Perl and R scripts (nrc_tools_public): <a href="https://bitbucket.org/jtremblay514/nrc_tools_public/src/master/" class="uri">https://bitbucket.org/jtremblay514/nrc_tools_public/src/master/</a><br />
 3) An extensive set of third-party software listed below and the versions used and tested with the pipeline. Installation details of each of these packages is also available (nrc_resources_public): <a href="https://bitbucket.org/jtremblay514/nrc_resources_public/src/master/" class="uri">https://bitbucket.org/jtremblay514/nrc_resources_public/src/master/</a><br />
 List of third party software:</p>
-<pre><code>trimmomatic/0.39,megahit/1.2.9,metabat/2.12.1,perl/5.26.0,qiime/1.9.1,bbmap/38.11,python/2.7.5,python/3.6.5,python/3.9.0,R/3.6.0,java/jdk1.8.0_144,blast/2.10.1+,bedtools/2.23,barrnap/0.9,hmmer/3.1b2,metabat/2.12.1,maxbin/2.7</code></pre>
+<pre><code>trimmomatic/0.39,megahit/1.2.9,metabat/2.12.1,perl/5.26.0,bbmap/38.11,python/2.7.5,python/3.6.5,python/3.9.0,R/3.6.0,java/jdk1.8.0_144,blast/2.10.1+,bedtools/2.23,barrnap/0.9,hmmer/3.1b2,metabat/2.12.1,maxbin/2.7,microbiomeutils/0.9</code></pre>
 <p>Installation of all the required libraries and external packages is a time consuming task and for the purpose of this guide, we’ll refer the reader to the CentOS 7 image that we provide, which includes all the necessary packages needed to properly execute ShotgunMG.</p>
 <p>The pipeline has been written in such a way that the user can use various software packages in the workflow. The pipeline supports two shotgun metagenome assemblers (Megahit and Spades), two reads mapper (bwa-mem and bbmap) and two metagenome binning methods (MetaBAT and MaxBin).</p>
 </div>
