@@ -1,0 +1,2420 @@
+---
+title: "AmpliconTagger v1.3.0 user guide"
+author: "Written by Julien Tremblay"
+date: "July 31st 2020"
+output: 
+  rmdformats::readthedown:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+      
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Content {#section0}
+This document is divided into the following sections:  
+[1) General information about the AmpliconTagger pipeline and how jobs are generated](#section1)  
+[2) Workflow walkthrough](#section2)  
+[3) Smart restart mechanism](#section3)  
+[4) End results](#section4)  
+[5) Note on preprocessing PacBio raw reads](#section5)  
+[6) Note the job output folder where standard output and standard error of each job are written](#section6)  
+[7) Integrating more options in a given bioinformatics package](#section7)
+[8) Citation](#section8)
+
+All files being referred to in this document can be found in the companion docker image:   https://cloud.docker.com/u/julio514/repository/docker/julio514/centos  
+The first step should be to install this image on your computer.
+
+The AmpliconTagger paper has been published in GigaScience and is available here: https://doi.org/10.1093/gigascience/giz146
+
+# 1- Getting started {#section1}
+
+## Global overview
+
+AmpliconTagger is a bioinformatics pipeline geared towards short amplicon sequencing processing on High Performance Computing (HPC) environments. Starting from gene amplicons (i.e. 16S/18S/ITS rRNA genes or other custom marker genes) raw sequencing reads, it generates Amplicon Sequence Variants (ASV) or Operational Taxonomic Units (OTU) -based analyses (Figure 1). 
+
+![Figure 1. Summary of the AmpliconTagger workflow.](figure1_small.png)
+
+Figure 1. Pipeline Overview - Figure adapted from Tremblay, 2019; Advanced Techniques for Studying Microorganisms in Extreme Environments, 2019 (https://doi.org/10.1515/9783110525786-006).
+
+It is intended for experienced bioinformaticians with experience on a Linux-based OS (i.e. command line) and a HPC environment, including interacting with a job scheduler, in our case, SLURM. The pipeline relies on the GenPipes Workflow Management System (WMS) and requires the 3 following elements in order to be functional:  
+1) The pipeline itself (nrc_pipeline_public):  https://bitbucket.org/jtremblay514/nrc_pipeline_public/src/1.3/  
+2) A set of heteregenous Perl and R scripts (nrc_tools_public): https://bitbucket.org/jtremblay514/nrc_tools_public/src/1.3/  
+3) An extensive set of third-party software listed below and the versions used and tested with the pipeline. Installation details of each of these packages is also available (nrc_resources_public): https://bitbucket.org/jtremblay514/nrc_resources_public/src/1.3/  
+List of third party software:  
+nrc_tools/1.3.0; perl/5.26.0; rdp_classifier/2.5; fasttree/2.1.10; FLASH/1.2.11; bbmap/38.11; dnaclust/3; fastx/0.0.13.2; python/3.9.0; R/3.6.0; java/jdk1.8.0_144; blast/2.10.1+; deblur/1.0.4; vsearch/2.7.1; pTrimmer/1.3.3; rtk/0.93.2; mafft/7.471  
+
+Installation of all the required libraries and external packages is a time consuming task and for the purpose of this guide, we'll refer the reader to the CentOS 7 image that we provide, which includes all the necessary packages needed to properly execute AmpliconTagger.  
+
+## Preprocessing raw reads
+The first step in running AmpliconTagger is to preprocess fastq files to make them ready to be processed by the pipeline. Fastq libraries usually come in the form of demultiplexed paired end sequencing libraries - one library per sample. Preprocessing fastqs simply consists of generating a single fastq file containing all demultiplexed raw reads libraries and assigning an informal index (aka barcode) sequence to them.
+
+Once the docker image is properly installed and loaded, we can go to the following directory
+```
+cd $INSTALL_HOME
+root@centos7image:/project/microbiome_genomics$ pwd
+/project/microbiome_genomics
+```
+Next we navigate to the projects directory where we have two directories:
+```
+>cd projects
+>ls -l
+AAD_demo_processed_vsearch
+AAD_demo_processed_dada2
+AAD_demo
+```
+
+The folders ```AAD_demo_processed_vsearch``` and ```AAD_demo_processed_dada2``` contain examples of the complete execution of AmpliconTagger on a subset of the AAD study (PMID:30046129) executed with a vsearch and dada2 workflow while the ```AAD_demo``` directory contains the raw_reads with other files needed to run the pipeline, but no data processing. In the ```AAD_demo``` directory, we have the following files and a ```raw_reads``` directory which holds a subset of samples from the AAD project:
+```
+root@centos7image:/project/microbiome_genomics/projects$ cd AAD_demo/ 
+root@centos7image:/project/microbiome_genomics/projects/AAD_demo$ ls -l
+total 52
+-rwxrwxr-x 1 root    root    12175 Feb  6 20:17 AmpliconTagger.ini
+-rw-rw-r-- 1 root    root      934 Feb  1 16:01 barcodes.fasta
+-rw-rw-r-- 1 root    root     1273 Feb  7 20:48 commands.sh
+drwxrwxr-x 1 root    root     4096 Feb  7 20:06 job_output
+-rw-r--r-- 1 root    root     3632 Feb  4 20:08 mapping_file.tsv
+-rw-rw-r-- 1 root    root       41 Feb  7 20:48 pipeline.json
+drwxrwsr-x 1 root    root     4096 Feb  1 15:45 raw_reads
+drwxrwxr-x 1 root    root     4096 Feb  7 20:06 amplicontagger
+-rwxr-x--- 1 root    root     1261 Feb  6 20:41 workflow.sh
+```
+
+The two inputs we need in order to launch the pipeline are :  
+1) the raw fastq.gz reads, which should all be stored in the ```raw_reads/``` directory. For paired_end libraries, all files should be labelled ```*_R1.fastq.gz``` and ```*_R2.fastq.gz```. For single end files, each library should end with ```_R1.fastq.gz```. No specific nomenclature is expected as long as the file names follow these minimal specifications.
+```
+>ls -l raw_reads/
+-rw-r--r-- 1 root root   9211851 May 27 20:09 120v2-A_S237_L001_R1_001.fastq.gz
+-rw-r--r-- 1 root root   9674881 May 27 20:09 120v2-A_S237_L001_R2_001.fastq.gz
+-rw-r--r-- 1 root root   7828069 May 27 20:08 120v3-A_S238_L001_R1_001.fastq.gz
+-rw-r--r-- 1 root root   8072334 May 27 20:08 120v3-A_S238_L001_R2_001.fastq.gz
+-rw-r--r-- 1 root root   9416489 May 27 20:09 129v2-A_S241_L001_R1_001.fastq.gz
+-rw-r--r-- 1 root root   9915486 May 27 20:09 129v2-A_S241_L001_R2_001.fastq.gz
+-rw-r--r-- 1 root root   5080506 May 27 20:08 129v3-A_S242_L001_R1_001.fastq.gz
+-rw-r--r-- 1 root root   5586795 May 27 20:08 129v3-A_S242_L001_R2_001.fastq.gz
+.
+.
+.
+
+```
+We left traces of the relevant commands in the workflow.sh file which contains the two following commands:
+
+```
+>cat workflow.sh
+# Preprocessing raw reads
+assignRandomBarcodesToFastqs.pl --indir ./raw_reads --outfile_barcodes ./barcodes.fasta --outfile_fastq ./raw_reads/preprocessed.fastq.gz --min_len 150
+
+# Make sure to validate mapping file sample ids with barcodes headers before proceeding further.
+validateMapAndBarcodes.pl --infile_barcodes ./barcodes.fasta --infile_mapping_file ./mapping_file.tsv
+
+# Run the pipeline:
+amplicontagger.py -c ./AmpliconTagger.ini -s 1-19 -o . -j slurm -b barcodes.fasta -z ./pipeline.json  > ./commands.sh
+
+```
+The first command calls the ```assignRandomBarcodesToFastqs.pl``` script and will take all ```.fastq.gz``` files in the ```raw_reads/``` directory, assigns a random barcode to each library and concatenates them into one single interleaved ```.fastq.gz``` file labelled ```raw_reads/preprocessed.fastq.gz```. The --min_len argument acts as a safeguard in case raw fastqs are of different lengths, which should happen in exceptional cases only.  
+This script will also generate a barcode file ```--outfile_barcodes barcodes.fasta``` that holds the information of which barcodes goes with which samples. If fastq.gz reads do not follow "standard" Illumina nomenclature, the ```--flexible``` flag can be added. If reads are single ended, the ```--se``` flag should be added. 
+
+Next, barcodes and mapping file should be validated:
+```
+validateMapAndBarcodes.pl --infile_barcodes ./barcodes.fasta --infile_mapping_file ./mapping_file.tsv
+```
+This script will make sure that the mapping file and barcodes labels match. If they don't, we'll receive explicit error messages specifying which labels are at fault. If all labels are correct and concordant, the following message will be printed in standard output:
+```
+All seems good, proceed and run the pipeline wrapper...
+```
+
+## Running the pipeline
+
+Once we have our validated mapping file and ```raw_reads/preprocessed.fastq.gz``` file in hand, we can run the pipeline wrapper:
+```
+amplicontagger.py -c ./AmpliconTagger.ini -s 1-19 -o . -j slurm -b barcodes.fasta -z ./pipeline.json  > ./commands.sh
+```
+Here ```-s``` argument specifies which steps to run. Specifying ```-s 1-19``` will run all of the pipeline's 19 steps:
+```
+1- validate
+2- remove_contam
+3- split_barcodes
+4- qscores
+5- qc
+6- generate_clusters
+7- classify
+8- generate_feature_table
+9- filter_feature_table
+10- prepare_tables_for_diversity
+11- align
+12- summarize_taxonomy
+13- beta_diversity
+14- alpha_diversity
+15- heatmap
+16- blast
+17- statistics
+18- deliverables
+```
+
+A selection of certain steps only can also be run:  
+For instance, ```-s 1-5``` will instruct the pipeline to generate jobs for steps 1 to 5.
+Once ```amplicontagger.py``` has been executed, all the jobs generated by the pipeline will be written in standard output or in the commands.sh file specified above. If the argument ```-j slurm``` is specified, all jobs will be written in such a way that they can be submitted to the SLURM job scheduler along with their job dependence requirement(s) and syntax, if any. If the ```-j batch``` argument is specified, the jobs will be written without the SLURM syntax so they can be run interactively on the terminal.  
+The ```-z ./pipeline.json``` argument specifies the json output file in which to store the pipeline structure, it can then be used for visualization purposes as shown here - http://jtremblay.github.io/PipelineViewer/amplicontagger.html  
+The ```-c ./AmpliconTagger.ini``` argument refers to the file that contains all the various jobs’ parameters for the pipeline and is described in details below.
+
+### ```amplicontagger.py``` and its corresponding libraries : ```bio/rrna_amplicons.py``` and ```bio/microbial_ecology.py```
+The nrc_pipeline_public repository contains the following structure:
+```
+├── [  156K]  rrna_amplicons.py
+│   ├── [1.0K]  sample.py
+│   └── [ 671]  sequence_dictionary.py
+├── core
+│   ├── [5.2K]  config.py
+│   ├── [7.6K]  job.py
+│   ├── [ 14K]  pipeline.py
+│   ├── [ 13K]  scheduler.py
+│   └── [1.3K]  step.py
+└── pipelines
+    ├── amplicontagger
+    │   ├── [ 68K]  amplicontagger.py
+    │   └── [7.7K]  preprocess_pacbio_amplicons.py
+    ├── [ 16K]  common.py
+    └──illumina
+        └── [4.4K]  illumina.py
+```
+It holds the Python libraries on which AmpliconTagger depends, but the most relevant Python files to discuss here in the context of this guide are the following:
+```
+pipelines/amplicontagger/amplicontagger.py
+bio/rrna_amplicons.py
+bio/microbial_ecology.py
+```
+```amplicontagger.py``` contains the main pipeline workflow definition and will make calls to other Python libraries of the repository to create Job objects and manage the dependencies of each job, but the bulk of each job invoked by ```amplicontagger.py``` is defined in ```rrna_amplicons.py``` and ```microbial_ecology.py``` and each job defined in these two libraries will fetch their parameters from the ```AmpliconTagger.ini``` file.
+
+### The .ini file.
+The .ini file, in our case, ```AmpliconTagger.ini``` contains job scheduler, software, database paths and third party packages specific parameters that will be used at each step of the pipeline. The first few lines of the .ini file contain general definitions mainly related to the job scheduler:
+```
+[DEFAULT]
+cluster_submit_cmd=sbatch
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+# change my_account_name with real account name if running on SLURM.
+cluster_other_arg=--account=my_account_name --export=ALL --mail-type=END --mail-user=$JOB_MAIL
+cluster_queue=
+cluster_work_dir_arg=-D
+cluster_output_dir_arg=-o
+cluster_job_name_arg=-J
+cluster_cmd_produces_job_id=true
+# the clusterSubmitCmdSuffix must be set to | grep \"[0-9]\" if clusterCmdProducesJobId=true
+cluster_submit_cmd_suffix= | grep -o "[0-9]*"
+cluster_dependency_arg=-d afterok:
+cluster_dependency_sep=:
+raw_read_dir=./raw_reads
+current_dir=./
+job_output_dir=./jobs_output
+```
+Here the parameters starting with ```cluster_``` defines default values and other values required by SLURM. The ```raw_reads_dir``` specifies where are the raw fastq files located. The ```job_output_dir``` points to the location of all stderr output of each job.
+
+The next chunk of parameters defines which modules will be invoked by the pipeline:
+```
+module_tools=nrc/nrc_tools/1.3.0
+module_perl=nrc/perl/5.26.0
+module_rdp_classifier=nrc/rdp_classifier/2.5
+module_fasttree=nrc/fasttree/2.1.10
+module_flash=nrc/FLASH/1.2.11
+module_bbmap=nrc/bbmap/38.11
+module_dnaclust=nrc/dnaclust/3
+module_fastx=nrc/fastx/0.0.13.2
+module_python3=nrc/python/3.9.0
+module_R=nrc/R/3.6.0
+module_java=nrc/java/jdk1.8.0_144
+module_blast=nrc/blast/2.10.1+
+module_deblur=nrc/deblur/1.0.4
+module_vsearch=nrc/vsearch/2.7.1
+module_ptrimmer=nrc/pTrimmer/1.3.3
+module_rtk=nrc/rtk/0.93.2
+module_mafft=nrc/mafft/7.471
+
+```
+For more information on modules, the reader is invited to consult references on Environment Modules (http://modules.sourceforge.net/). 
+
+Next are general (but critical) parameters like sequencing reads configuration, file paths of amplification primers files and which organisms to keep in downstream OTU/ASV tables. Here we wish to state that we are aware that ASV generation (deblur, dada2) differs from clustering. However, in the context of the pipeline structure, ASV generation methods are part of the clustering step.
+```
+# accepted values for library_type are the following: ex, nc1, nc2 and nc1nc2. ex : paired-end reads to be merged using their overlapping part prior to clustering/ASV generation. nc1 : will only use left forward reads (i.e. R1). nc1 : will only use right reverse reads (i.e. R2). nc1nc2 will process R1 and R2 reads separately with no merging. Currently only used when clustering_method is set to dada2.
+
+# If ex: output files will be written in the ./amplicontagger/reads_12/ directory. The ex parameter can be used in combination with dnaclust, vsearch and deblur for OTU/ASV generation method (clustering_method=<string> in the .ini file as specified below).
+# If nc1: output files will be written in the ./amplicontagger/reads_1/ directory
+# If nc2: output files will be written in the ./amplicontagger/reads_2/ directory. nc2 is in practice very rarely used, mostly for debugging purpose or in the situation were forward reads (reads 1) are unusable because of low quality or other problem(s).
+# If nc1nc2: output files will be written in the ./amplicontagger/reads_12/ directory. The nc1nc2 parameter should only be specified when using dada2 for ASV generation method (clustering_method=dada2 in the .ini file as specified below). DADA2 takes fwd and rev reads separately and does the merging itself. 
+
+# In the current example, we will use vsearch on assembled/extended fragments, hence the library_type=ex and clustering_method=vsearch
+library_type=ex
+mapping_file=./mapping_file.tsv
+tmp_dir=$TMPDIR
+forward_primer=$INSTALL_HOME/databases/primers/V4/V4_F.fasta
+reverse_primer=$INSTALL_HOME/databases/primers/V4/V4_R.fasta
+
+# organism_type can be one of the following: bacteriaArchaea, bacteria, archaea, fungi, eukaryotes or everything
+organism_type=bacteriaArchaea
+keep_chloroplast=no
+keep_mitochondria=no
+```
+Next are database paths:
+```
+[DB]
+# DB containing sequencing contaminants, adapters known artefacts. 
+contaminants=$INSTALL_HOME/databases/contaminants/Illumina.artifacts.fa
+# DB containing the sequence of the PhiX phage.
+phix=$INSTALL_HOME/databases/contaminants/phix174_NC_001422.1.fasta
+# Core Greengenes fasta alignment to use with PyNAST.
+core=$INSTALL_HOME/databases/fasta/greengenes/core_set_aligned.fasta
+# Training set used by the RDP classifier software to assign a taxonomic lineage to each OTUs/ASVs
+rdp_training_set=$INSTALL_HOME/databases/RDP_training_sets/silva/2017-07-12/genus/rRNAClassifier.properties
+# Fasta reference containing known 16S rRNA gene sequences for chimera identification.
+chimeras=$INSTALL_HOME/databases/fasta/broad/gold.fa
+```
+And next are all the parameters of each job generated by the pipeline. For instance we have the following values under the ```[cut_reads], [tags_QC]``` and ```[bbduk]``` sections:
+```
+[cut_reads]
+R1_start=0
+R1_end=10
+R2_start=0
+R2_end=10
+cluster_walltime=-t 6:00:0
+cluster_cpu=-N 1 -n 1
+
+[separate_reads_qc]
+maxNs=0
+minlength=100
+maxlength=500
+m=3
+k=12
+maq=20
+cluster_walltime=-t 6:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+
+[bbduk]
+# more on bbduk's parameters by running bbduk.sh -h
+# Size of kmers 
+k=21
+# minkmerhits
+c=1
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+.
+.
+.
+
+```
+
+#### Important parameters
+The most important parameters for the pipeline are listed below. These parameters should always be doubled-checked before running the pipeline. Key parameters under the ```[DEFAULT]``` and ```[DB]``` categories are discussed above, but relisted here. Special attention should be observed for the ```[clustering]``` parameters too. If ```clustering_method``` is set to ```vsearch``` or ```dnaclust```, the parameters specific to the two-round clustering process described in the AmpliconTagger paper are the following: ```lowAbunCutOff=25```, ```first_round=0.99```, ```second_round=0.97```. If ```clustering_method``` is set to ```deblur```, parameters that will be used are: ```trim_length=249```, ```indel_max=5```, ```min_reads=25``` and ```min_size=0```.  
+```trim_length``` is critical as all reads or merged amplicon pairs shorter than this cutoff will not be considered for ASV generation (as per deblur's functionality - https://github.com/biocore/deblur).
+
+```
+[DEFAULT]
+library_type=nc1nc2
+organism_type=bacteriaArchaea
+
+[DB]
+# DB containing sequencing contaminants, adapters known artefacts. 
+contaminants=$INSTALL_HOME/databases/contaminants/Illumina.artifacts.fa
+# DB containing the sequence of the PhiX phage.
+phix=$INSTALL_HOME/databases/contaminants/phix174_NC_001422.1.fasta
+# Core Greengenes fasta alignment to use with PyNAST.
+core=$INSTALL_HOME/databases/fasta/greengenes/core_set_aligned.fasta
+# Training set used by the RDP classifier software to assign a taxonomic lineage to each OTUs/ASVs
+rdp_training_set=$INSTALL_HOME/databases/RDP_training_sets/silva/2017-07-12/genus/rRNAClassifier.properties
+# Fasta reference containing known 16S rRNA gene sequences for chimera identification.
+chimeras=$INSTALL_HOME/databases/fasta/broad/gold.fa
+
+[clustering]
+# clustering_method accepted values: "deblur", "dnaclust", "vsearch" or "dada2"
+clustering_method=vsearch
+# reads_type accepted values: "short_reads" or "long_reads". for long reads, only one round of clustering will be done (first_round arg below)
+reads_type=short_reads
+# For the min_reads parameter, Only sequences >= <int> will be
+# kept. So sequences < <int> are discarded.
+# For instance, if <int>=2, only cluster that have a total of at least 2 will be kept.
+# The min_reads cutoff is applied after the first round of clustering for dnaclust and vsearch and after ASV generation for deblur and dada2.
+min_reads=25
+########################
+#parameters for dnaclust and vsearch
+first_round=0.99
+second_round=0.97
+########################
+# parameters for deblur.
+trim_length=249
+indel_max=5
+min_size=0
+########################
+#parameters for dada2: qc done in previous step (tags_QC). leave maxEE=2
+trimLeft=0
+maxEE=2
+truncQ=0
+minQ=0
+########################
+num_threads=16
+
+```
+
+## Jobs and their dependencies
+One key feature of AmpliconTagger is its ability to generate jobs and manage the dependency network of each job. If we look at the first two steps representing three jobs that are being written in the commands.sh file, we see the following instructions:
+```
+#-------------------------------------------------------------------------------
+# STEP: validate
+#-------------------------------------------------------------------------------
+STEP=validate
+mkdir -p $JOB_OUTPUT_DIR/$STEP
+
+#-------------------------------------------------------------------------------
+# JOB: validate_1_JOB_ID: validate_map_and_barcodes
+#-------------------------------------------------------------------------------
+JOB_NAME=validate_map_and_barcodes
+JOB_DEPENDENCIES=
+JOB_DONE=job_output/validate/validate_map_and_barcodes.ef11d3e6b518dd1a1ed1baff2a035f92.nrc.done
+JOB_OUTPUT_RELATIVE_PATH=$STEP/${JOB_NAME}_$TIMESTAMP.o
+JOB_OUTPUT=$JOB_OUTPUT_DIR/$JOB_OUTPUT_RELATIVE_PATH
+validate_1_JOB_ID=$(echo "#!/bin/sh
+rm -f $JOB_DONE && \
+set -o pipefail
+module load nrc/nrc_tools_public/dev  && \
+
+validateMapAndBarcodes.pl \
+  --infile_barcodes barcodes.fasta \
+  --infile_mapping_file ./mapping_file.tsv && \
+  touch ./amplicontagger/validateMapAndBarcodes.done
+NRC_STATE=\$PIPESTATUS
+echo NRC_exitStatus:\$NRC_STATE
+if [ \$NRC_STATE -eq 0 ] ; then touch $JOB_DONE ; fi
+exit \$NRC_STATE" | \
+sbatch --account=my_account_id --export=ALL --mail-type=END --mail-user=$JOB_MAIL -D $OUTPUT_DIR -o $JOB_OUTPUT -J $JOB_NAME -t 12:00:0  --mem=12000 -N 1 -n 1  | grep -o "[0-9]*")
+echo "$validate_1_JOB_ID    $JOB_NAME   $JOB_DEPENDENCIES   $JOB_OUTPUT_RELATIVE_PATH" >> $JOB_LIST
+
+#-------------------------------------------------------------------------------
+# STEP: remove_contam
+#-------------------------------------------------------------------------------
+STEP=remove_contam
+mkdir -p $JOB_OUTPUT_DIR/$STEP
+
+#-------------------------------------------------------------------------------
+# JOB: remove_contam_1_JOB_ID: duk_contam
+#-------------------------------------------------------------------------------
+JOB_NAME=duk_contam
+JOB_DEPENDENCIES=$validate_1_JOB_ID
+JOB_DONE=job_output/remove_contam/duk_contam.d092bc966bc57b98fa826e05f9a2e1b0.nrc.done
+JOB_OUTPUT_RELATIVE_PATH=$STEP/${JOB_NAME}_$TIMESTAMP.o
+JOB_OUTPUT=$JOB_OUTPUT_DIR/$JOB_OUTPUT_RELATIVE_PATH
+remove_contam_1_JOB_ID=$(echo "#!/bin/sh
+rm -f $JOB_DONE && \
+set -o pipefail
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 nrc/bbmap/38.11 && \
+
+bbduk.sh \
+  in=./raw_reads/preprocessed.fastq.gz \
+  stats=./amplicontagger/duk/duk_contam_log.txt \
+  out=./amplicontagger/duk/ncontam.fastq \
+  outm=./amplicontagger/duk/contam.fastq \
+  k=21 \
+  minkmerhits=1 \
+  ref=/project/PROJECT_ID/databases/contaminants/Illumina.artifacts.fa \
+  overwrite=true \
+  threads=1
+NRC_STATE=\$PIPESTATUS
+echo NRC_exitStatus:\$NRC_STATE
+if [ \$NRC_STATE -eq 0 ] ; then touch $JOB_DONE ; fi
+exit \$NRC_STATE" | \
+sbatch --account=my_account_id --export=ALL --mail-type=END --mail-user=$JOB_MAIL -D $OUTPUT_DIR -o $JOB_OUTPUT -J $JOB_NAME -t 12:00:0  --mem=12000 -N 1 -n 1 -d afterok:$JOB_DEPENDENCIES | grep -o "[0-9]*")
+echo "$remove_contam_1_JOB_ID   $JOB_NAME   $JOB_DEPENDENCIES   $JOB_OUTPUT_RELATIVE_PATH" >> $JOB_LIST
+
+#-------------------------------------------------------------------------------
+# JOB: remove_contam_2_JOB_ID: duk_phix
+#-------------------------------------------------------------------------------
+JOB_NAME=duk_phix
+JOB_DEPENDENCIES=$remove_contam_1_JOB_ID
+JOB_DONE=job_output/remove_contam/duk_phix.987313853e5e1f373a297b3f9d6ac5d0.nrc.done
+JOB_OUTPUT_RELATIVE_PATH=$STEP/${JOB_NAME}_$TIMESTAMP.o
+JOB_OUTPUT=$JOB_OUTPUT_DIR/$JOB_OUTPUT_RELATIVE_PATH
+remove_contam_2_JOB_ID=$(echo "#!/bin/sh
+rm -f $JOB_DONE && \
+set -o pipefail
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 nrc/bbmap/38.11 && \
+
+bbduk.sh \
+  in=./amplicontagger/duk/ncontam.fastq \
+  stats=./amplicontagger/duk/duk_phix_log.txt \
+  out=./amplicontagger/duk/ncontam_nphix.fastq \
+  outm=./amplicontagger/duk/ncontam_phix.fastq \
+  k=21 \
+  minkmerhits=1 \
+  ref=$INSTALL_HOME/databases/contaminants/phix174_NC_001422.1.fasta \
+  overwrite=true \
+  threads=1
+NRC_STATE=\$PIPESTATUS
+echo NRC_exitStatus:\$NRC_STATE
+if [ \$NRC_STATE -eq 0 ] ; then touch $JOB_DONE ; fi
+exit \$NRC_STATE" | \
+sbatch --account=my_account_id --export=ALL --mail-type=END --mail-user=$JOB_MAIL -D $OUTPUT_DIR -o $JOB_OUTPUT -J $JOB_NAME -t 12:00:0  --mem=12000 -N 1 -n 1 -d afterok:$JOB_DEPENDENCIES | grep -o "[0-9]*")
+echo "$remove_contam_2_JOB_ID   $JOB_NAME   $JOB_DEPENDENCIES   $JOB_OUTPUT_RELATIVE_PATH" >> $JOB_LIST
+
+```
+The first step ```STEP: validate``` of the pipeline contains a single job called ```validate_map_and_barcodes``` and will run the ```validateMapAndBarcodes.pl``` script that we manually ran earlier as a safeguard. This job contains no dependency: the variable ```JOB_DEPENDENCIES=``` is not assigned any values and there are no ```-d afterok:$JOB_DEPENDENCIES``` argument passed on to the ```sbatch``` command. This means that this job will be executed as soon as the job scheduler finds appropriate resources to execute it. In that particular case, we are asking for 12 GB of RAM ```--mem=12000```, a walltime of 12 hrs ```-t 12:00:0``` and 1 compute node and 1 core or cpu ```-N 1 -n 1```. These values are specified in the ```AmpliconTagger.ini``` file.  
+In the .ini file, there is no section labelled ```[validate_map_and_barcodes]``` and in consequence, the default parameters specified on lines 3 to 5 of the .ini file will be used. 
+
+The second step of the pipeline ```STEP: remove_contam``` contains two jobs, the first of which ```duk_contam``` depends on the sucessful execution of the ```validate_map_and_barcodes``` job. In this case, the ```JOB_DEPENDENCY``` variable is assigned the ```$remove_contam_1_JOB_ID``` value (```JOB_DEPENDENCIES=$remove_contam_1_JOB_ID```) and the sbatch command contains the ```-d afterok:$JOB_DEPENDENCIES``` argument. This means that SLURM  will wait for the ```$validate_1_JOB_ID``` to be sucessfully completed (i.e. ```exit_status=0```) before submitting the ```duk_contam``` job in the waiting queue. The same procedure is followed for the following job ```duk_phix```: it will only be submitted in the waiting queue by the job scheduler once the ```remove_contam``` job has been sucessfully completed, hence the ```JOB_DEPENDENCIES=$remove_contam_1_JOB_ID``` variable and corresponding ```-d afterok:$JOB_DEPENDENCIES``` ```sbatch``` argument. 
+
+## How are these jobs generated in the amplicontagger.py script?
+The script ```pipelines/amplicontagger/amplicontagger.py``` contains the narrative of the pipeline and will create job objects relying on the ```bio/rrna_amplicons.py``` and ```bio/microbial_ecology.py``` Python libraries. For intance the first ```validate_map_and_barcodes``` job mentionned above is written on lines 34-39 inside the step validate:
+
+```pipelines/amplicontagger/amplicontagger.py```
+```{python, python.reticulate=FALSE}
+def validate(self):
+    jobs = [] 
+
+    job = rrna_amplicons.validate_map_and_barcodes( # will call the validate_map_and_barcodes function inside the bio/rrna_amplicons.py library
+        os.path.relpath(self._barcodes.name),
+        os.path.join(self._root_dir, "validateMapAndBarcodes.done")
+    )
+    job.name = "validate_map_and_barcodes"
+    jobs.append(job)
+  
+    return jobs
+```
+As stated before, the ```validate``` step contains a single job only. This job object is instanciated by calling the validate_map_and_barcodes function inside the ```bio/rrna_amplicons.py``` Python library which is described below:
+```{python, python.reticulate=FALSE}
+def validate_map_and_barcodes(barcodes, outfile_done):
+    
+    job = Job(
+        [barcodes], # Input file - essential to specify for the job dependency network
+        [outfile_done], #Output file - essential to specify for the job dependency network. This output file will somehow be used as input for the next job definition.
+        [['tools', 'module_tools']] # modules are defined in the .ini file. In the current case, we ask for the module_tools=nrc/nrc_tools_public/dev  (defined in .ini file) to be loaded
+    )   
+    
+    job.command = """ 
+validateMapAndBarcodes.pl \\
+  --infile_barcodes {barcodes} \\
+  --infile_mapping_file {map} && \\
+  touch {outfile_done}""".format(
+        barcodes = barcodes,
+        map = config.param('default', 'mapping_file', 1, 'filepath'), # config.param calls values defined in the .ini file. Here mapping_file=./mapping_file.tsv (defined in the .ini file)
+        outfile_done = outfile_done
+    )   
+
+    return job 
+```
+The two arguments passed to the ```validate_map_and_barcodes``` function are the barcodes.fasta file and a .done file labelled ```./validateMapAndBarcodes.done```. These two arguments will be used to populate the validate_map_and_barcodes job arguments. It is critical to specify which are the inputs and outputs of each job as these values are used by the WMS to manage job dependencies when generating jobs for the SLURM scheduler. In the case of this particular job, once ```validateMapAndBarcodes.pl --infile_barcodes ./barcodes.fasta --infile_mapping_file ./mapping_file.tsv``` sucessfully executes and returns an exit status of zero, the following command will be executed : ```touch validateMapAndBarcodes.done```. This last touched file represents the output file defined in the Job object definition and as such is important since it is also used as one of the inputs for the next job ```bbduk_contaminants```, so that the dependency network can be properly built.  
+
+
+## Summary
+To summarize (Figure 2), the main pipeline worflow is defined in ```amplicontagger.py``` where each Job object will be instanciated and defined in either ```rrna_amplicons.py``` or ```microbial_ecology.py```. Customizable parameters defined in the job definition of these two Python libraries are defined in the .ini file (```AmpliconTagger.ini```).
+
+![Figure 2. Summary of the interaction between main pipeline workflow, its libraries and the .ini file.](userguide_fig_1.png)
+
+# 2- Workflow walkthrough {#section2}
+
+In the next section, we will go through each step of the AmpliconTagger pipeline and describe all results that are generated in each of these steps. For this example, the pipeline was run with 16S amplicons paired-end fastqs configuration. 
+
+## Description of results generated by each job
+In this section, each job will be described to facilitate the understanding of each step of AmpliconTagger. For the sake of simplicity, only the commands themselves will be shown. For more details, the reader is referred to the complete ```commands.sh``` file example included in the supplementary material of the AmpliconTagger paper. 
+
+### Step 1 - validate
+This step contains a single job that validates the mapping file (mapping_file.tsv) and the barcodes file (barcodes.fasta). The only output generated is the ```amplicontagger/validateMapAndBarcodes.done``` file which will be used as input in the first job of the remove_contam step (step 2).
+
+#### JOB: validate_map_and_barcodes
+```
+module load nrc/nrc_tools_public/dev  && \ 
+
+validateMapAndBarcodes.pl \
+  --infile_barcodes barcodes.fasta \
+  --infile_mapping_file ./mapping_file.tsv && \ 
+  touch ./amplicontagger/validateMapAndBarcodes.done
+```
+Purpose:
+
+To compare barcodes file headers with the field #SampleID in the mapping file. The script will identify 
+discrepencies in standard error.
+
+
+### Step 2- remove_contam
+This step invokes two consecutive bbduk (bbtools) jobs to remove known sequencing contaminants and PhiX reads from raw_reads. The remaining reads ```./amplicontagger/duk/ncontam_nphix.fastq``` will be used for the downstream jobs.
+
+#### JOB: duk_contam
+```
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 nrc/bbmap/38.11 && \ 
+bbduk.sh \
+  in=./raw_reads/preprocessed.fastq.gz \
+  stats=./amplicontagger/duk/duk_contam_log.txt \
+  out=./amplicontagger/duk/ncontam.fastq \
+  outm=./amplicontagger/duk/contam.fastq \
+  k=21 \
+  minkmerhits=1 \
+  ref=/project/PROJECT_ID/databases/contaminants/Illumina.artifacts.fa \
+  overwrite=true \
+  threads=1
+```
+Purpose:
+
+To scan fastq libraries for known sequencing contaminants and remove them.
+
+.ini:
+```
+[DEFAULT]
+contaminants=$INSTALL_HOME/databases/contaminants/Illumina.artifacts.fa
+
+[bbduk]
+k=21
+c=1
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+#### JOB: duk_phix
+```
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 nrc/bbmap/38.11 && \
+bbduk.sh \
+  in=./amplicontagger/duk/ncontam.fastq \
+  stats=./amplicontagger/duk/duk_phix_log.txt \
+  out=./amplicontagger/duk/ncontam_nphix.fastq \
+  outm=./amplicontagger/duk/ncontam_phix.fastq \
+  k=21 \
+  minkmerhits=1 \
+  ref=$INSTALL_HOME/databases/contaminants/phix174_NC_001422.1.fasta \
+  overwrite=true \
+  threads=1
+```
+Purpose:
+
+To scan fastq libraries for PhiX reads and remove them.
+
+.ini:
+```
+[DEFAULT]
+phix=$INSTALL_HOME/databases/contaminants/phix174_NC_001422.1.fasta
+
+[bbduk]
+k=21
+c=1
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+### Step 3 - split_barcodes
+
+In this step, the ```./amplicontagger/duk/ncontam_nphix.fastq``` file generated in the last step will be demultiplexed using the indexes provided in the ```barcodes.fasta``` file.
+
+#### JOB: split_barcodes
+```
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 && \
+barcodes.pl \
+--infile ./amplicontagger/duk/ncontam_nphix.fastq \
+--barcodes barcodes.fasta \
+--outfile ./amplicontagger/assembled/fastqs/ncontam_nphix.fastq \
+--num_threads 1  \
+--log ./amplicontagger/assembled/fastqs/ncontam_nphix_barcodes.txt
+```
+Purpose:
+
+To split/demultiplex a fastq file by its barcode sequences.
+
+.ini:
+```
+[barcodes]
+num_threads=1
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+#### JOB: remove_unpaired
+```
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 && \
+removeUnpaired.pl \
+--infile ./amplicontagger/assembled/fastqs/ncontam_nphix.fastq \
+--outfile_paired ./amplicontagger/assembled/fastqs/ncontam_nphix_paired.fastq \
+--outfile_1 ./amplicontagger/assembled/fastqs/ncontam_nphix_unpaired_1.fastq \
+--outfile_2 ./amplicontagger/assembled/fastqs/ncontam_nphix_unpaired_2.fastq \
+--num_threads 1
+```
+Purpose:
+
+To remove unpaired reads from a paired end reads fastq file.
+Paired end reads of a fastq file might get disrupted
+after filtering for contaminants. This scripts assumes
+that reads are in a collated paired end reads order.
+For instance:
+```
+@A/1
+@A/2
+@B/2
+@C/1
+@C/2
+@D/1
+```
+Will only keep valid pairs having both /1 and /2: @A and @C.
+
+.ini:
+```
+[remove_unpaired]
+num_threads=1
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: split_pairs
+```
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 && \
+splitPairs.pl \
+--infile ./amplicontagger/assembled/fastqs/ncontam_nphix_paired.fastq \
+--outfile_1 ./amplicontagger/assembled/fastqs/ncontam_nphix_1.fastq \
+--outfile_2 ./amplicontagger/assembled/fastqs/ncontam_nphix_2.fastq \
+--num_threads 4
+```
+Purpose:
+
+To split interleaved fastq in two files: one for R1 and the other for R2.
+
+.ini:
+```
+[split_pairs]
+num_threads=4
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 4
+```
+
+### Step 4- qscores
+#### JOB: generate_qscore_reads1
+
+```
+module load nrc/fastx/0.0.13.2 nrc/nrc_tools_public/dev  nrc/perl/5.26.0 && \
+qscoreSheets.pl \
+ --fastq ./amplicontagger/assembled/fastqs/ncontam_nphix_1.fastq \
+ --tmp /scratch/jtrembla/tmp \
+ --prefix reads_1 \
+ --suffix suffix \
+ --log ./amplicontagger/assembled/qscores/qual_stats_1_log.txt \
+ --outfile ./amplicontagger/assembled/qscores/qscores_1.tsv \
+ --phred 33 \
+ --barcodes barcodes.fasta \
+ --num_threads 16
+```
+Purpose:
+
+To generate Qscore sheets using fastx_quality_stats. 
+
+.ini:
+```
+[qscore_sheet]
+num_threads=16
+cluster_walltime=-t 24:00:0
+cluster_cpu=-N 1 -n 16
+cluster_pmem=--mem=32000
+```
+
+#### JOB: generate_qscore_reads2
+```
+module load nrc/fastx/0.0.13.2 nrc/nrc_tools_public/dev  nrc/perl/5.26.0 && \
+qscoreSheets.pl \
+ --fastq ./amplicontagger/assembled/fastqs/ncontam_nphix_2.fastq \
+ --tmp /scratch/jtrembla/tmp \
+ --prefix reads_2 \
+ --suffix suffix \
+ --log ./amplicontagger/assembled/qscores/qual_stats_12_log.txt \
+ --outfile ./amplicontagger/assembled/qscores/qscores_2.tsv \
+ --phred 33 \
+ --barcodes barcodes.fasta \
+ --num_threads 16
+```
+Purpose:
+
+Same as generate_qscore_reads1
+
+.ini:
+```
+Same as generate_qscore_reads1
+```
+
+#### JOB: generate_qscore_graph_paired
+```
+module load nrc/R/3.4.0 nrc/nrc_tools_public/dev  nrc/perl/5.26.0 && \
+qscorePlots.pl \
+  --infile_1 ./amplicontagger/assembled/qscores/qscores_1.tsv \
+  --infile_2 ./amplicontagger/assembled/qscores/qscores_2.tsv \
+  --name qual_stats \
+  --pdf ./amplicontagger/assembled/qscores/qual_stats_unassembled.pdf \
+  --display 1 \
+  --paired
+```
+Purpose:
+
+To generate Qscore profile figures for each sequencing library.
+
+.ini:
+```
+[qscore_plot]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+### Step 5- qc
+#### JOB: cut_reads1
+Notes on cut_reads_1 and cut_reads_2 jobs: these two jobs were initially implemented, because earlier versions of FLASH mishandled the merging of paired-reads that overlapped too much. There does not seem to be any issue with recent versions of FLASH, including the latest version. Nevertheless, we decided to leave this step as it allows for another level of control. For instance, if some reads need to be cut at a certain length due to consistent bad quality after this position, this step can be useful when performing a R1 or R2 only workflow.
+```
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 && \
+cutFastqSeq.pl \
+--infile ./amplicontagger/assembled/fastqs/ncontam_nphix_1.fastq \
+--begin 0 \
+--end 70 \
+--outfile ./amplicontagger/assembled/fastqs/ncontam_nphix_trimmed_1.fastq
+```
+Purpose:
+
+To remove a specific number of nucleotides from either the beginning or the end of reads (or both). Useful if we have a library that consistently shows bad quality after nt 125, or a library in which the last nucleotides are consistently of bad quality.
+
+.ini:
+```
+[cut_reads]
+R1_start=0
+R1_end=10
+R2_start=0
+R2_end=10
+cluster_walltime=-t 6:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: cut_reads2
+```
+module load nrc/nrc_tools_public/dev nrc/perl/5.26.0 && \
+cutFastqSeq.pl \
+--infile ./amplicontagger/assembled/fastqs/ncontam_nphix_2.fastq \
+--begin 0 \
+--end 70 \
+--outfile ./amplicontagger/assembled/fastqs/ncontam_nphix_trimmed_2.fastq
+```
+Purpose:
+
+Same as cut_reads1 job, but for reads 2.
+
+.ini:
+```
+[cut_reads]
+R1_start=0
+R1_end=10
+R2_start=0
+R2_end=10
+cluster_walltime=-t 6:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+
+
+#### JOB: tags_QC
+```
+module load nrc/bbmap/38.11 nrc/java/jdk1.8.0_144 nrc/pTrimmer/1.3.3 && \
+
+reformat.sh \
+   in=./amplicontagger/reads_12/fastqs/ncontam_nphix_1_trimmed.fastq \
+   in2=./amplicontagger/reads_12/fastqs/ncontam_nphix_2_trimmed.fastq \
+   out=./amplicontagger/reads_12/fastqs/ncontam_nphix_1_trimmednoN.fastq \
+   out2=./amplicontagger/reads_12/fastqs/ncontam_nphix_2_trimmednoN.fastq \
+   maxns=0 \
+   qtrim=rl \
+   overwrite=true \
+   maxlength=500 \
+   minlength=100 \
+   trimq=1 && \
+pTrimmer \
+   -t pair \
+   -a /project/6008026/databases/primers/V4/V4_multi.txt \
+   -f ./amplicontagger/reads_12/fastqs/ncontam_nphix_1_trimmednoN.fastq \
+   -d ./amplicontagger/reads_12/fastqs/ncontam_nphix_1_trimmed_QCpassed.fastq \
+   -r ./amplicontagger/reads_12/fastqs/ncontam_nphix_2_trimmednoN.fastq \
+   -e ./amplicontagger/reads_12/fastqs/ncontam_nphix_2_trimmed_QCpassed.fastq \
+   -k 12 \
+   -m 3 \
+   -q 20 \
+   -s ./amplicontagger/reads_12/fastqs/qc_log.txt
+```
+Purpose:
+
+To filter fastq reads by their quality scores. Will also remove primer regions in 5' and/or 3' if primer sequences are specified in input arguments. Here for the current example, reads in the ```ncontam_nphix_trimmed.extendedFrags.fastq``` file are being filtered in such a way that all reads will be scanned for both their forward and reverse primer sequences, the V4 primer pair in this example. Primer removal is done using ```pTrimmer``` with the file ```V4_multi.txt```. Reads with no found primer sequence  are rejected. Once primer sequences have been removed, the remaining part of the now truncated reads are filtered for their quality (with ```pTrimmer```, ```-q 20```). Here each read having either an average Phred quality score lower than ```20``` and ```0 N``` (undefined bases) are rejected (in the ```reformat.sh``` code chunk). If a read passes these filters, it goes through the length filter. In this example, reads having a length lower than ```100``` or higher than ```500``` are rejected. The length filter does not really do anything for this data type as pretty much all sequences found in the fastqs are of similar/same length. However, in some exceptional cases, fastqs can be unconventionally formatted and a length filter is necessary. 
+
+.ini:
+```
+[separate_reads_qc]
+maxNs=0
+minlength=100
+maxlength=500
+m=3
+k=12
+maq=20
+cluster_walltime=-t 6:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+
+```
+Results:
+
+#### JOB: qscore_sheet_assembled_qced
+```
+module load nrc/fastx/0.0.13.2 nrc/nrc_tools_public/dev nrc/perl/5.26.0 && \
+
+qscoreSheets.pl \
+ --fastq ./amplicontagger/reads_12/fastqs/ncontam_nphix_1_trimmed_QCpassed.fastq \
+ --tmp /scratch/jtrembla/tmp \
+ --prefix reads_1_QCed \
+ --suffix suffix \
+ --log ./amplicontagger/reads_12/fastqs/barcodes_log_reads_1_QCpassed.txt \
+ --outfile ./amplicontagger/reads_12/fastqs/qscores_reads_1_QCpassed.tsv \
+ --phred 33 \
+ --barcodes barcodes.fasta \
+ --num_threads 16
+```
+Purpose:
+```
+To generate Qscore (Phred) sheets of merged amplicon sequences. 
+```
+.ini:
+```
+[qscore_sheet]
+num_threads=16
+cluster_walltime=-t 24:00:0
+cluster_cpu=-N 1 -n 16
+cluster_pmem=--mem=32000
+```
+
+#### JOB: qscore_graph_assembled_qced
+```
+module load nrc/R/3.6.0 nrc/nrc_tools_public/dev nrc/perl/5.26.0 && \
+
+qscorePlots.pl \
+ --infile_1 ./amplicontagger/reads_12/fastqs/qscores_reads_1_QCpassed.tsv \
+ --name qual_stats_reads_1_QCed \
+ --pdf ./amplicontagger/reads_12/qscores_reads_1_QCpassed.pdf \
+ --display 1 \
+ --single
+```
+Purpose:
+
+To generate Qscore profile figures for each merged amplicon sequencing library.
+
+.ini:
+```
+[qscore_plot]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+Results:
+
+ At this point all the quality score related results are located here: ```amplicontagger/reads_12/qscores/``` and contains the following files:
+```
+barcodes_assembled_QCpassed_log.txt
+qscores_1.tsv
+qscores_2.tsv
+qscores_assembled_QCpassed.pdf
+qscores_assembled_QCpassed.tsv
+qual_stats_12_log.txt
+qual_stats_1_log.txt
+qual_stats_unassembled.pdf
+```
+Here are a few Q score boxplots for a few samples as an example below. In these plots (```qual_stats_unassembled.pdf```) are the Q score profile of each forward and reverse reads separately - before paired-end assembly.
+<!--![Figure 2. Summary of the interaction between main pipeline workflow, its libraries and the .ini file.](Qscore_unassembled.png)-->
+
+
+In these plots (```qscores_assembled_QCpassed.pdf```) are the Q score profile of each paired-end assembled sequence.
+
+<!--[Figure 3. Summary of the interaction between main pipeline workflow, its libraries and the .ini file.](Qscore_assembled.png)-->
+
+### Step 6- generate_asv_dada2
+Multiplexed QCed fastqs must be demultiplexed prior to going into DADA2.
+
+#### JOB: split_barcodes_for_dada2_R1
+```
+module load nrc/nrc_tools_public/dev nrc/perl/5.26.0 && \
+rm -rf ./amplicontagger/reads_12/obs/demultiplexed/*_R1.fastq && \
+barcodes.pl \
+--infile ./amplicontagger/reads_12/fastqs/ncontam_nphix_1_trimmed_QCpassed.fastq \
+--barcodes barcodes.fasta \
+--outdir ./amplicontagger/reads_12/obs/demultiplexed \
+--num_threads 1 \
+--suffix _R1 \
+--log ./amplicontagger/reads_12/obs/split_barcodes_R1.txt && \
+touch ./amplicontagger/reads_12/obs/split_barcodes_R1.done
+```
+#### JOB: split_barcodes_for_dada2_R2
+```
+module load nrc/nrc_tools_public/dev nrc/perl/5.26.0 && \
+rm -rf ./amplicontagger/reads_12/obs/demultiplexed/*_R2.fastq && \
+barcodes.pl \
+--infile ./amplicontagger/reads_12/fastqs/ncontam_nphix_2_trimmed_QCpassed.fastq \
+--barcodes barcodes.fasta \
+--outdir ./amplicontagger/reads_12/obs/demultiplexed \
+--num_threads 1 \
+--suffix _R2 \
+--log ./amplicontagger/reads_12/obs/split_barcodes_R2.txt && \
+touch ./amplicontagger/reads_12/obs/split_barcodes_R2.done
+```
+
+#### JOB: generate_clusters_dada2
+Additional note on generate_clusters: AmpliconTagger currently supports two methods to generate clusters (i.e. OTUs): vsearch and dnaclust. It also supports two Amplicon Sequence Variants (ASV) methods (deblur and dada2). 
+```
+module load nrc/R/3.6.0 nrc/nrc_tools_public/dev nrc/perl/5.26.0 && \
+
+dada2.R -i ./amplicontagger/reads_12/obs/demultiplexed \
+ -o ./amplicontagger/reads_12/obs/dada2 \
+ -t spe \
+ -p 6 \
+ -l 0 \
+ -m 2 \
+ -c 0 \
+ -q 0 && touch ./amplicontagger/reads_12/obs/dada2/dada2.done
+
+### Post-process DADA2 results. ASV table is processed to generate a more human readable-friendly format
+module load nrc/nrc_tools_public/dev nrc/perl/5.26.0 && \
+convertASVIds.pl \
+  --min_reads 5 \
+  --infile_tsv ./amplicontagger/reads_12/obs/dada2/all_nochimera.tsv \
+  --outfile_tsv ./amplicontagger/reads_12/obs/all_nochimera.tsv \
+  --outfile_fasta ./amplicontagger/reads_12/obs/all_nochimera.fasta
+ 
+### Remove chimeras. Another round of chimera removal is done using VSEARCH's UCHIME REF implementation.
+scanningForChimeras.pl \
+  --infile_tsv ./amplicontagger/reads_12/obs/all_nochimera.tsv \
+  --infile_fasta ./amplicontagger/reads_12/obs/all_nochimera.fasta \
+  --outdir ./amplicontagger/reads_12/obs \
+  --ref_db /project/6008026/databases/fasta/broad/gold.fa \
+  --num_threads 6 --ref_only
+```
+Purpose:
+
+To cluster amplicon sequences by their similarity or generate amplicon sequence variants. This script basically performs the two step clustering workflow described in the AmpliconTagger paper.Briefly, reads are clustered at 100% identity and then clustered/denoised at 99% identity (vsearch, dnaclust). Clusters having abundances lower than 3 are discarded. Remaining clusters are then scanned for chimeras with Vsearch’s version of UCHIME denovo and UCHIME reference and clustered at 97% (dnaclust or vsearch) to form the final clusters/OTUs. For PacBio long amplicons, filtered reads are clustered at 97% identity and clusters having less than 2 reads (i.e. customizable parameter) are discarded. Remaining reads are scanned for chimera using UCHIME reference. If deblur or DADA2 are used, filtered reads are used as input for deblur or DADA2. Resulting ASVs are then scanned for chimeras with Vsearch’s version of UCHIME denovo and UCHIME reference. In the case of DADA2, input paired-end reads are provided as forward and reverse reads separately (not paired-end assembled).
+
+.ini:
+```
+[clustering]
+#clustering_method accepted values: "deblur", "dnaclust", "vsearch" or "deblur"
+clustering_method=vsearch
+#reads_type accepted values: "short_reads" or "long_reads". for long reads, only one round of clustering will be done (first_round arg below)
+reads_type=short_reads
+# For the min_reads parameter, Only sequences >= <int> will be
+# kept. So sequences < <int> are discarded.
+# For instance, if <int>=2, only cluster that have a total of at least 2 will be kept.
+min_reads=25
+########################
+#parameters for dnaclust and vsearch
+first_round=0.99
+second_round=0.97
+########################
+# parameters for deblur.
+trim_length=249
+indel_max=5
+min_size=0
+########################
+num_threads=16
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 16
+cluster_pmem=--mem=72000
+```
+Results:
+
+##### If VSEARCH of DNACLUST workflow (OTUs):
+Here are the commands that are being executed by the ```clusteringShortReadsVsearch.pl``` wrapper script:
+```
+# Dereplicate sequences at 100% identity.
+dereplicate.pl --fastq ./amplicontagger/reads_12/fastqs/ncontam_nphix_trimmed.extendedFrags_QCpassed.fastq --outfile ./amplicontagger/reads_12/obs/derep1.fasta --num_threads 16
+
+# Perform clustering.
+vsearch --cluster_smallmem  ./amplicontagger/reads_12/obs/derep1.fasta  --id 0.99 --uc ./amplicontagger/reads_12/obs/derep1_099.uc --log ./amplicontagger/reads_12/obs/derep1_099.log --usersort --threads 16
+
+# Sort sequences and remove clusters having less than 25 abundance across all samples.
+dereplicate.pl -fasta ./amplicontagger/reads_12/obs/derep1_099.fasta -outfile ./amplicontagger/reads_12/obs/derep1_099_derep2.fasta -minsize 25 -sort                         
+
+# Scan for chimeras denovo.
+vsearch --uchime_denovo ./amplicontagger/reads_12/obs/derep1_099_derep2.fasta --nonchimeras ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovo.fasta
+
+# Scan for chimeras - reference.
+vsearch --uchime_ref ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovo.fasta --db /project/6008026/databases/fasta/broad/gold.fa --nonchimeras ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDe
+NovoRef.fasta --threads 16
+
+# Sort sequences.
+dereplicate.pl -fasta ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef.fasta -outfile ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef_sorted.fasta -sort
+
+# Performd second round clustering at 97% identity.
+vsearch --cluster_smallmem ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef_sorted.fasta --id 0.97 --log ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDenovoRef_sorted_097.log --uc ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDenovoRef_sorted_097.uc --usersort --threads 16
+
+# Sort clusters by abundance and writes cluster matrix.
+dereplicate.pl --fasta ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef_sorted_097.fasta --outfile ./amplicontagger/reads_12/obs/derep1_099_derep2_nonChimDeNovoRef_sorted_097_sorted.fasta --sort
+~                                                                                                                    
+```
+
+All the intermediate files generated during the clustering process are located here: ```amplicontagger/reads_12/obs/``` and contain the following files:
+```
+ls -lhrt amplicontagger/reads_12/obs/
+
+-rw-rw-r-- 1 root root  33M Aug  9 16:05 derep1.fasta
+-rw-rw-r-- 1 root root  11M Aug  9 16:05 derep1_099.uc
+-rw-rw-r-- 1 root root  752 Aug  9 16:05 derep1_099.log
+-rw-rw-r-- 1 root root 6.1M Aug  9 16:05 derep1_099.fasta
+-rw-rw-r-- 1 root root  96K Aug  9 16:05 derep1_099_derep2.fasta
+-rw-rw-r-- 1 root root  46K Aug  9 16:05 derep1_099_derep2_nonChimDeNovo.fasta
+-rw-rw-r-- 1 root root  45K Aug  9 16:05 derep1_099_derep2_nonChimDeNovoRef_sorted.fasta
+-rw-rw-r-- 1 root root  45K Aug  9 16:05 derep1_099_derep2_nonChimDeNovoRef.fasta
+-rw-rw-r-- 1 root root  973 Aug  9 16:05 obs.tsv
+-rw-rw-r-- 1 root root 8.9K Aug  9 16:05 obs.fasta
+-rw-rw-r-- 1 root root  22K Aug  9 16:05 derep1_099_derep2_nonChimDenovoRef_sorted_097.uc
+-rw-rw-r-- 1 root root  12K Aug  9 16:05 derep1_099_derep2_nonChimDeNovoRef_sorted_097_sorted.fasta
+-rw-rw-r-- 1 root root  841 Aug  9 16:05 derep1_099_derep2_nonChimDenovoRef_sorted_097.log
+-rw-rw-r-- 1 root root  12K Aug  9 16:05 derep1_099_derep2_nonChimDeNovoRef_sorted_097.fasta
+```
+```derep1.fasta``` contains all 100% dereplicated sequences. The abundance information is stored in the header of each sequence. For instance, the second most abundant sequence (labeled 2 in the fasta file) contains the following header:
+```
+>2;#AAAAAGCCG=12628;#AAAAACTGA=18151;#AAAAAACTG=19940;size=50719
+TACGTAGGGGGCAAGCGTTATCCGGATTTACTGGGTGTAAAGGGAGCGTAGGTGGTAGGTCAAGTCAGATGTGAAAGCCCAGGGCTCAACCCTGGGACTGCATTTGAAACTGGCTTACTAGAGTGCAGGAGAGGTAAGTGGAATTCCTAGTGTAGCGGTGAAATGCGTAGATATTAGGAGGAACACCAGTGGCGAAGGCGGCTTACTGGACTGTAACTGACACTGAGGCTCGAAAGCGTGGGGAGCAAACAGG
+```
+Meaning that this exact sequence was observed 12,628 times in sample/index #AAAAAGCCG, 18,151 times in index #AAAAACTGA, 19,940 times in index #AAAAAACTG for a total count of 50,719.
+
+This file ```derep1.fasta``` is then clustered at 99% identity using vsearch which generates ```derep1_099.uc``` and ```derep1_099.log``` files. The .uc file is then parsed to obtain the ```derep1_099.fasta``` file which is then sorted and filtered so that all clusters having abundance lower than 25 are discarded. This gives the ```derep1_099_derep2.fasta``` file which is then scanned for chimeras using consecutive vsearch uchime denovo and reference to generate the following files: ```derep1_099_derep2_nonChimDeNovo.fasta``` and ```derep1_099_derep2_nonChimDeNovoRef.fasta```. This latter file is then sorted ```derep1_099_derep2_nonChimDeNovoRef_sorted.fasta``` and clustered at 97% identity using vsearch to yield the  ```derep1_099_derep2_nonChimDenovoRef_sorted_097.uc``` file which is then parsed to generate ```derep1_099_derep2_nonChimDenovoRef_sorted_097.fasta```. This latter file is sorted and used to generate the ```obs.tsv``` and ```obs.fasta``` files - which are the end results of this clustering workflow.
+
+##### If DADA2 workflow:
+The directory ```amplicontagger/reads_12/obs/dada2``` holds the results generated by the dada2.R wrapper:
+```
+all_nochimera.tsv
+all.tsv
+dada2.done
+errF.pdf
+errR.pdf
+filter_and_trim_stats.tsv
+filtered
+seqtab_nochimera.rds
+seqtab.rds
+```
+These results are then further processed as described above in the following directory ```amplicontagger/reads_12/obs/dada2```:
+Final ASVs are held into the ```obs.tsv``` file. Sequences of each ASV is located in the ```obs.fasta``` file.
+```
+all_nochimera.fasta
+all_nochimera_nonChimRef.fasta
+all_nochimera.tsv
+dada2/
+demultiplexed/
+obs.fasta
+obs.tsv
+```
+
+
+### Step 7- classify
+#### JOB: classify
+Here the RDP classifier is used to classify clusters or ASVs generated above. We use our own training set, done with the SILVA 128 release (at the time of writing) - https://github.com/jtremblay/RDP-training-sets. The ```parallelRDP.pl``` script is a wrapper that splits the ```obs.fasta``` file in parts equal to the number of specified threads ```--threads <int>``` and launch parallel instances of the RDP executable command: ```java -d64 -Xmx3g -jar /project/6008026/software/rdp_classifier/rdp_classifier-2.5/rdp_classifier.jar -q /scratch/tmpDirRDPvUjVhdb/seq1.fasta -o /scratch/tmpDirRDPvUjVhdb/OUT_1 -t /path/to/databases/RDP_training_sets/silva/2017-07-12/genus/rRNAClassifier.properties --minWords 120```
+Make sure to use the latest AmpliconTagger databases found at https://zenodo.org/record/3560150#.X-JIYXVKhhE
+If more than one thread is specified all outputs in the tmp folder are concatenated in the ```./amplicontagger/assembled/rdp/rdp.tsv``` file.
+```
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 nrc/rdp_classifier/2.5 nrc/java/jdk1.8.0_144 && \
+if [[ -s ./amplicontagger/assembled/obs/obs.fasta ]] ; then
+    parallelRDP.pl \
+     --infile ./amplicontagger/assembled/obs/obs.fasta \
+     --RDP_training_set /project/PROJECT_ID/databases/RDP_training_sets/silva/2017-07-12/genus/rRNAClassifier.properties \
+     --outfile ./amplicontagger/assembled/rdp/rdp.tsv \
+     --minWords 120 \
+     --num_threads 4 \
+     --ram 8g \
+     --fasta
+else
+    touch ./amplicontagger/assembled/rdp/rdp.tsv
+fi ;
+```
+Purpose:
+
+To assign a taxonomic lineage to each cluster representative sequence or ASVs 
+
+.ini:
+```
+[DEFAULT]
+rdp_training_set=$INSTALL_HOME/databases/RDP_training_sets/silva/2017-07-12/genus/rRNAClassifier.properties
+
+[RDP]
+num_threads=4
+minWords=120
+RAM=8g
+cluster_walltime=-t 6:00:0
+cluster_cpu=-N 1 -n 4
+cluster_pmem=--mem=48000
+```
+
+### Step 8- generate_feature_table
+From this point forward, the feature_table* file names can refer to OTU tables or ASV tables. The file name prefix contains the feature_table prefix to specify that the file format follows the legacy .tsv OTU table format.
+
+#### JOB: generate_feature_table_open
+```
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev && \
+addTaxToObs.pl \
+  --seqobs ./amplicontagger/assembled/obs/obs.tsv \
+  --rdp ./amplicontagger/assembled/rdp/rdp.tsv \
+  --cutoff 0.5 \
+  --outfile ./amplicontagger/assembled/feature_tables/feature_table.tsv \
+  --outfile_failed ./amplicontagger/assembled/feature_tables/feature_table_failed.tsv \
+  --tax_level best
+```
+Purpose:
+
+To add a taxonomic lineage to each cluster or ASV to generate a legacy OTU table file format. Here lineages of each entry will be reconstructed so that each taxonomic depth assignment has a value higher than 0.5. For instance, given the following lineage generated by the RDP classifier for a given cluster or ASV:
+```
+1.0     k__Bacteria                      Kingdom 
+1.0     p__Firmicutes                    Phylum  
+0.99    c__Clostridia                    Class   
+0.99    o__Clostridiales                 Order   
+0.99    f__Clostridiaceae                Family  
+0.29    g__uncultured-Clostridiaceae     Genus
+```
+The resulting lineage will be k__Bacteria;p__Firmicutes;c__Clostridia;o__Clostridiales;f__Clostridiaceae and will exlude the g__ level taxon as it has a confidence score lower than 0.5.
+
+.ini:
+```
+[add_taxonomy]
+# Threshold value for constructing lineages from the RDP classifier results.
+cutoff=0.50
+# By specifying best, lineages will be constructed up to the taxon level value >= <cutoff> specified above
+tax_level=best
+cluster_walltime=-t 02:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=9000
+```
+
+### Step 9- filter_feature_table
+#### JOB: filter_feature_table
+```
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev  && \
+rmEmptyCol.pl \
+  --infile ./amplicontagger/assembled/feature_tables/feature_table.tsv \
+  --outfile ./amplicontagger/assembled/feature_tables/feature_table_filtered.tsv
+```
+Purpose:
+
+To remove empty columns (samples). This rarely happens, but can break downstream steps if not adressed.
+
+.ini:
+```
+[filter_feature_table]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+#### JOB: split_feature_table
+```
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev  && \
+splitFeatureTable.pl \
+  --infile ./amplicontagger/assembled/feature_tables/feature_table_filtered.tsv \
+  --matched ./amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea.tsv \
+  --unmatched ./amplicontagger/assembled/feature_tables/feature_table_filtered_others.tsv \
+  --keepChloro no \
+  --keepMito no \
+  --select bacteriaArchaea
+```
+Purpose:
+
+To split the OTU table based on the input ```--select <string>``` value. All lineages matching that value will be kept in the ```--matched <string>``` outfile. This step is simple but critical and is directly dependant on the nature of the primer pair used to generate the amplicons. If for instance the V4 or V4-V6 primer pairs were used in the sequencing library preparation, the value ```bacteriaArchaea``` should be assigned to the parameter ```organism_type=``` in the .ini file. This value is used as input in the ```splitOTUtable.pl``` script above and will filter for OTUs/ASVs that were assigned a Bacteria or Archaea value at the kingdom level. Some primer pairs are specific to Bacteria, Fungi or Eukaryotes. Failure to specify the appropriate parameter here will have significant impact in downstream results and overall data interpretation.
+
+.ini:
+```
+[DEFAULT]
+organism_type=bacteriaArchaea
+
+[split_feature_table]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: rarefy_multi_norm_1000
+The next two jobs implement the method described in the AmpliconTagger paper to generate a consensus rarefied OTU table. The first job implements RTK to generate 500 rarefied tables at a 1000 reads depth.
+```
+module load nrc/nrc_tools_public/dev nrc/rtk/0.93.2 && \
+
+mkdir -p ./amplicontagger/reads_12/feature_tables/rarefactions/1000/rarefaction && \
+sed '1 s/^\\S\\+\\t/\\t/' ./amplicontagger/reads_12/feature_tables/feature_table_filtered_bacteriaArchaea.tsv > ./amplicontagger/reads_12/feature_tables/rarefactions/1000/rarefaction/tmp.tsv && \
+rtk swap \
+  -i ./amplicontagger/reads_12/feature_tables/rarefactions/1000/rarefaction/tmp.tsv \
+  -o ./amplicontagger/reads_12/feature_tables/rarefactions/1000/rarefaction/ \
+  -r 500 -w 500 \
+  -d 1000 && \
+rm ./amplicontagger/reads_12/feature_tables/rarefactions/1000/rarefaction/tmp.tsv && \
+touch ./amplicontagger/reads_12/feature_tables/rarefactions/1000/rarefaction/rtk.done
+```
+Purpose:
+
+To generate 500 (```--permutations 500```) OTU tables, rarefied to 1,000 reads each. All 500 tables will be written in the ```./amplicontagger/assembled/feature_tables/rarefactions/1000/rarefaction``` directory.
+
+.ini:
+```
+# For OTU/ASV table normalization through rarefaction
+[rarefaction]
+# Number of reads to rarefy to in normalization rarefaction.
+n_normalization=1000
+perm_normalization=500
+num_threads=4
+cluster_walltime=-t 24:00:0
+cluster_cpu=-N 1 -n 4
+cluster_pmem=--mem=64000
+```
+
+#### JOB: merge_rarefied_tables_norm_1000
+```
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev && \
+
+mergeRarefiedTables.pl \
+  --indir ./amplicontagger/reads_12/feature_tables/rarefactions/1000/rarefaction \
+  --infile ./amplicontagger/reads_12/feature_tables/feature_table.tsv \
+  > ./amplicontagger/reads_12/feature_tables/feature_table_filtered_bacteriaArchaea_rarefied_1000.tsv
+```
+Purpose:
+
+From the .tsv rarefied tables generated in the previous step, generate a consensus feature table in which the average number of reads for each OTU/ASV of each sample will be computed.
+
+.ini:
+```
+# also for rarefaction as a means of normalization.
+[merge_rarefied_tables]
+cluster_walltime=-t 24:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=128000
+```
+
+#### JOB: normalize_feature_table_target_organisms
+```
+module load nrc/perl/5.26.0  nrc/nrc_tools_public/dev  nrc/R/3.4.0 nrc/GotoBLAS+LAPACK/1.13 && \
+normalizeFeatureTable.R \
+  -i ./amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea.tsv \
+  -o ./amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea_normalized.tsv \
+  -c 250
+```
+
+Purpose:
+
+To generate a normalized OTU/ASV table using edgeR's RLE normalization method. See edgeR manual for more information. Briefly, each value of each cell represents a Count Per Million (CPM). 
+
+.ini:
+```
+[normalization]
+# reads per columns/samples. Sample(s) having a total number reads lower than this threshold value will be discarded. 
+normalization_threshold=250
+cluster_walltime=-t 10:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=128000
+```
+
+### Step 10- prepare_tables_for_diversity
+#### JOB: filter_feature_table_normalized
+
+This job acts as a final sanity check on the normalized OTU/ASV table, by making sure that no empty samples remain and that the table is sorted by the abundance of the sum or its rows (OTU/ASV). Additionaly, the ```_final_``` suffix is added to the output table file name (i.e. ```feature_table_final_rarefied.tsv```). This "final" table will be used for downstream steps computing diversity and taxonomic profiles.
+
+```
+module load nrc/perl/5.26.0 nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+rmEmptyCol.pl \
+  --infile ./amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea_normalized.tsv \
+  --outfile ./amplicontagger/assembled/feature_tables/feature_table_final_normalized.tsv.tmp && \
+sortOTUTable.R -i ./amplicontagger/assembled/feature_tables/feature_table_final_normalized.tsv.tmp -o ./amplicontagger/assembled/feature_tables/feature_table_final_normalized.tsv
+```
+Purpose:
+
+From the normalized OTU/ASV table, removes samples with 0 reads and sorts the table by abundance (the sum of each row). Also rename the table with the 'checkpoint' suffix ```_final_normalized```. This normalized table is generated but not used for downstream steps at the moment.
+
+.ini:
+```
+[filter_feature_table]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+
+#### JOB: filter_feature_table_rarefied
+This job acts as a final sanity check on the consensus rarefied OTU/ASV table, by making sure that no empty samples remain and that the table is sorted by the abundance or the sum or its rows (OTU/ASV). Additionaly, the ```_final_``` suffix is added to the output table file name (i.e. ```feature_table_final_rarefied.tsv```). This "final" table will be used for downstream steps computing diversity and taxonomic profiles.
+```
+module load nrc/perl/5.26.0 nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+rmEmptyCol.pl \
+  --infile ./amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea_rarefied_1000.tsv \
+  --outfile ./amplicontagger/assembled/feature_tables/feature_table_final_rarefied.tsv.tmp && \
+sortOTUTable.R -i ./amplicontagger/assembled/feature_tables/feature_table_final_rarefied.tsv.tmp -o ./amplicontagger/assembled/feature_tables/feature_table_final_rarefied.tsv
+```
+Purpose:
+
+From the consensus rarefied OTU/ASV table, removes samples with 0 reads and sorts the table by abundance (the sum of each row).
+
+.ini:
+```
+[filter_feature_table]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+### Step 11- align
+#### JOB: filter_for_mafft
+```
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev && \
+
+filterForAlignment.pl \
+  --infile_feature_table ./amplicontagger/reads_12/feature_tables/feature_table_final_rarefied.tsv \
+  --infile_fasta ./amplicontagger/reads_12/obs/obs.fasta \
+  > ./amplicontagger/reads_12/feature_tables/features.fasta
+```
+Purpose:
+
+To filter the raw OTU or ASV fasta file to include only OTU/ASV IDs that are present in the provided ```--infile_feature_table <string>``` .tsv file.
+
+.ini:
+```
+[filter_for_mafft]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: pynast
+```
+module load nrc/mafft/7.471 && \
+mafft \
+  --progress /dev/null \
+  ./amplicontagger/reads_12/feature_tables/features.fasta \
+  > ./amplicontagger/reads_12/mafft/mafft.fasta
+```
+Purpose:
+
+To generate a multiple sequence alignment using MAFFT.
+
+.ini:
+```
+[mafft]
+num_threads=1
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: fasttree
+```
+module load nrc/fasttree/2.1.10 && \
+
+FastTree \
+  -nt ./amplicontagger/reads_12/mafft/mafft.fasta \
+  > ./amplicontagger/reads_12/fasttree/tree.fasttree
+
+```
+Purpose:
+
+To generate a phylogenetic tree from the PyNAST alignment generated above.
+
+.ini:
+```
+[fasttree]
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+### Step 12- summarize_taxonomy
+In this step, taxonomic summaries for each taxonomic level are generated. L1=kingdom, L2=phylum, L3=class, L4=order, L5=family, L6=genus (L7=species for long PacBio reads only). Both absolute and relative abundance tables will be generated. Taxonomic summaries are generated for all taxonomic levels, but for the sake of practicality, only the jobs for L1-kingdom summaries are shown here. Taxonomic summaries are computed using microbiomeutils (https://github.com/jtremblay/microbiomeutils) - which is included in nrc_tools.
+
+#### JOB: tax_summary_absolute_L1
+```
+module load nrc/python/3.9.0 nrc/nrc_tools_public/dev && \
+
+microbiomeutils.py taxsum \
+  -i ./amplicontagger/reads_12/feature_tables/feature_table_final_rarefied.tsv \
+  -l 1 \
+  -t absolute \
+  > ./amplicontagger/reads_12/tax_summary/absolute/feature_table_final_rarefied_L1.tsv
+```
+Purpose:
+
+To generate a taxonomic abundance table for the specified taxonomic depth.
+
+.ini:
+```
+[summarize_taxonomy]
+#Seven for genus, eight for species
+taxonomy_depth=7
+num_threads=1
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+#### JOB: tax_summary_relative_L1
+```
+module load nrc/python/3.9.0 nrc/nrc_tools_public/dev && \
+microbiomeutils.py taxsum \
+  -i ./amplicontagger/reads_12/feature_tables/feature_table_final_rarefied.tsv \
+  -l 1 \
+  -t relative \
+  > ./amplicontagger/reads_12/tax_summary/relative/feature_table_final_rarefied_L1.tsv
+```
+Purpose:
+
+To generate a taxonomic abundance table for the specified taxonomic depth. Here the ```taxonomy_depth=7``` parameter should be 7 for short amplicons and 8 for long reads data type. Taxonomy depth can technicially be set to 8, but should be avoided as assigning species level taxonomy to short amplicon data is controversial.
+
+.ini:
+```
+[summarize_taxonomy]
+#Seven for genus, eight for species
+taxonomy_depth=7
+num_threads=1
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+#### JOB: plot_taxa_single_relative_L1
+plot_taxa jobs are also generated for L1 to L6 (or L7) taxonomic depth, but only L1 is shown here.
+```
+module load nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+taxBarplot.R \
+  -i ./amplicontagger/assembled/tax_summary/relative/feature_table_final_rarefied_L1.txt \
+  -o ./amplicontagger/assembled/tax_summary/relative/plots/ \
+  -p taxonomy_L1_relative
+```
+Purpose:
+
+To generate a simple taxonomic profile figure.
+
+.ini:
+```
+[plot_taxa]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: plot_taxa_single_absolute_L1
+```
+module load nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+taxBarplot.R \
+  -i ./amplicontagger/assembled/tax_summary/absolute/feature_table_final_rarefied_L1.txt \
+  -o ./amplicontagger/assembled/tax_summary/absolute/plots/ \
+  -p taxonomy_L1_absolute
+```
+Purpose:
+
+Generate a simple taxonomic profile figure.
+
+.ini:
+```
+[plot_taxa]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: plot_taxa_single_relative_L1
+```
+module load nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+taxBarplotWithMappingFile.R \
+  -i ./amplicontagger/assembled/tax_summary/relative/feature_table_final_rarefied_L1.txt \
+  -o ./amplicontagger/assembled/tax_summary/relative/plots/ \
+  -p taxonomy_L1_relative \
+  -m ./mapping_file.tsv && touch ./amplicontagger/assembled/tax_summary/relative/plots/taxonomy_L1_relative.done
+```
+Purpose:
+
+To generate multiple taxonomic profile figures covering the variables provided in the mapping file.
+
+.ini:
+```
+[plot_taxa]
+cluster_walltime=-t 01:00:0
+cluster_cpu=-N 1 -n 1
+```
+
+### Step 13- beta_diversity
+#### JOB: beta_diversity_unifrac_weighted
+
+```
+module load nrc/python/3.9.0 nrc/nrc_tools_public/dev && \
+
+microbiomeutils.py betadiv \
+  -i ./amplicontagger/reads_12/feature_tables/feature_table_final_rarefied.tsv \
+  -m weighted-unifrac \
+  -t ./amplicontagger/reads_12/fasttree/tree.fasttree \
+  > ./amplicontagger/reads_12/beta_div/weighted_unifrac_feature_table_final_rarefied.tsv \
+  && sed -i 's/nan/0.0/g' ./amplicontagger/reads_12/beta_div/weighted_unifrac_feature_table_final_rarefied.tsv
+
+```
+Purpose:
+
+To generate a weighted UniFrac distance matrix from an OTU table.
+
+.ini:
+```
+[beta_diversity]
+cluster_walltime=-t 03:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+#### JOB: beta_diversity_bray_curtis
+
+```
+module load nrc/python/3.9.0 nrc/nrc_tools_public/dev && \
+
+microbiomeutils.py betadiv \
+  -i ./amplicontagger/reads_12/feature_tables/feature_table_final_rarefied.tsv \
+  -m bray-curtis \
+  -t ./amplicontagger/reads_12/fasttree/tree.fasttree \
+  > ./amplicontagger/reads_12/beta_div/bray_curtis_feature_table_final_rarefied.tsv \
+  && sed -i 's/nan/0.0/g' ./amplicontagger/reads_12/beta_div/bray_curtis_feature_table_final_rarefied.tsv
+```
+Purpose:
+
+To generate a Bray-Curtis dissimilarity matrix from an OTU table.
+
+.ini:
+```
+[beta_diversity]
+cluster_walltime=-t 03:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+#### JOB: beta_diversity_unifrac_weighted_PCoA
+```
+module load nrc/python/3.9.0 nrc/nrc_tools_public/dev && \
+
+microbiomeutils.py pcoa \
+  -i ./amplicontagger/reads_12/beta_div/weighted_unifrac_feature_table_final_rarefied.tsv \
+  > ./amplicontagger/reads_12/beta_div/weighted_unifrac_feature_table_final_rarefied_coords.tsv
+```
+Purpose:
+
+To generate principal coordinates from a distance matrix (weighted UniFrac).
+
+.ini:
+```
+[pca]
+cluster_walltime=-t 00:20:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: beta_diversity_bray_curtis_PCA
+```
+module load nrc/python/3.9.0 nrc/nrc_tools_public/dev && \
+
+microbiomeutils.py pcoa \
+  -i ./amplicontagger/reads_12/beta_div/bray_curtis_feature_table_final_rarefied.tsv \
+  > ./amplicontagger/reads_12/beta_div/bray_curtis_feature_table_final_rarefied_coords.tsv
+```
+Purpose:
+
+To generate principal coordinates from a dissimilarity matrix (Bray-Curtis).
+
+.ini:
+```
+[pca]
+cluster_walltime=-t 00:20:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: beta_diversity_weighted_unifrac_3d_plot
+```
+module load nrc/python/3.9.0 nrc/nrc_tools_public/dev && \
+
+microbiomeutils.py emperor \
+  -i ./amplicontagger/reads_12/beta_div/weighted_unifrac_feature_table_final_rarefied_coords.tsv \
+  -m ./mapping_file.tsv \
+  -o ./amplicontagger/reads_12/beta_div/plots/3d_weighted_unifrac
+```
+Purpose:
+
+To generate interactive 3-dimensional PCoA plots using variables provided in the mapping file.
+
+.ini:
+```
+[pca_plot]
+cluster_walltime=-t 00:20:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: beta_diversity_bray_curtis_3d_plot
+
+```
+module load nrc/python/3.9.0 nrc/nrc_tools_public/dev && \
+
+microbiomeutils.py emperor \
+  -i ./amplicontagger/reads_12/beta_div/bray_curtis_feature_table_final_rarefied_coords.tsv \
+  -m ./mapping_file.tsv \
+  -o ./amplicontagger/reads_12/beta_div/plots/3d_bray_curtis
+```
+Purpose:
+
+To generate interactive 3-dimensional PCoA plots using variables provided in the mapping file.
+
+.ini:
+```
+[pca_plot]
+cluster_walltime=-t 00:20:0
+cluster_cpu=-N 1 -n 1
+```
+
+#### JOB: weighted_unifrac_pcoa_plots
+
+```
+module load nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+plotPCA.R \
+  -i ./amplicontagger/assembled/beta_div/weighted_unifrac_feature_table_final_rarefied_coords.tsv \
+  -o ./amplicontagger/assembled/beta_div/plots/ \
+  -p pca_weighted_unifrac \
+  -m ./mapping_file.tsv &&
+  touch ./amplicontagger/assembled/beta_div/plots/pcaPlots.done
+```
+Purpose:
+
+To generate multiple 2-dimensional plots using variables provided in the mapping file.
+
+.ini:
+```
+[pca_plot]
+cluster_walltime=-t 00:20:0
+cluster_cpu=-N 1 -n 1
+```
+
+
+#### JOB: bray_curtis_pcoa_plots
+
+```
+module load nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+plotPCA.R \
+  -i ./amplicontagger/assembled/beta_div/bray_curtis_feature_table_final_rarefied_coords.tsv \
+  -o ./amplicontagger/assembled/beta_div/plots/ \
+  -p pca_bray_curtis \
+  -m ./mapping_file.tsv &&
+  touch ./amplicontagger/assembled/beta_div/plots/pcaPlots.done
+```
+Purpose:
+
+To generate multiple 2-dimensional plots using variables provided in the mapping file.
+
+.ini:
+```
+[pca_plot]
+cluster_walltime=-t 00:20:0
+cluster_cpu=-N 1 -n 1
+```
+
+### Step 14- alpha_diversity
+The next 3 jobs: multiple_rarefaction_saturation, alpha_diversity_saturation and collate_alpha_saturation will generate rarefied tables at 20 different rarefaction depths covering the least to the most abundant sample in the objective of obtaining rarefaction curves to evaluate saturation of sequencing depth for each sample. Uses RTK to perform both rarefaction and diversity indexes computation.
+
+#### JOB: alpha_diversity_saturation
+Note that the input OTU/ASV table is the raw (unnormalized, unrarefied) table: ```./amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea.tsv```
+
+```
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev nrc/rtk/0.93.2 && \
+
+mkdir -p ./amplicontagger/reads_12/alpha_div && \
+generateDepthPointsForRarefaction.pl \
+  --remove_last_col true \
+  --infile ./amplicontagger/reads_12/feature_tables/feature_table_filtered_bacteriaArchaea.tsv \
+  --number_of_points 30 \
+  > ./amplicontagger/reads_12/alpha_div/depth_list.txt && \
+sed '1 s/^\\S\\+\\t/\\t/' ./amplicontagger/reads_12/feature_tables/feature_table_filtered_bacteriaArchaea.tsv > ./amplicontagger/reads_12/alpha_div/tmp.tsv && \
+rtk swap \
+  -i ./amplicontagger/reads_12/alpha_div/tmp.tsv \
+  -o ./amplicontagger/reads_12/alpha_div/ \
+  -r 10 \
+  -d \`cat ./amplicontagger/reads_12/alpha_div/depth_list.txt\` && \
+rm ./amplicontagger/reads_12/alpha_div/tmp.tsv && \
+touch ./amplicontagger/reads_12/alpha_div/rtk.done
+```
+Purpose:
+
+To generate rarefied tables at the specified read depth. If --number_of_points <int> is not specified (as per the present case), the script will determine 20 rarefaction values covering the range of read abundance of all samples. All rarefied tables are written in the ```./amplicontagger/assembled/alpha_div/rarefaction/``` directory.
+
+.ini:
+Other parameters exists under ```[multiple_rarefaction]```. Only those specific to the multiple_rarefaction_saturation job are shown here.
+```
+# For OTU single table rarefaction for alpha diversity or for saturation alpha diversity
+[multiple_rarefaction]
+rarefaction_threshold=1000
+perm_saturation=10
+num_threads=6
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 6
+cluster_pmem=--mem=24000
+```
+
+
+#### JOB: rarefaction_plots
+```
+module load nrc/R/3.6.0 nrc/nrc_tools_public/dev && \
+
+  plotAlphaDivWithFactors.R \
+   -i ./amplicontagger/reads_12/alpha_div/alpha_richness.tsv \
+   -o ./amplicontagger/reads_12/alpha_div/plots \
+   -p observedFeatures \
+   -m ./mapping_file.tsv \
+  && \
+  plotAlphaDivWithFactors.R \
+   -i ./amplicontagger/reads_12/alpha_div/alpha_shannon.tsv \
+   -o ./amplicontagger/reads_12/alpha_div/plots \
+   -p shannon \
+   -m ./mapping_file.tsv \
+  && touch ./amplicontagger/reads_12/alpha_div/plots/rarefactionPlots.done
+```
+Purpose:
+
+To generate various alpha diversity figures (Observed OTUs/species, Shannon) based on the variables of the mapping file.
+
+.ini:
+```
+[rarefaction_plots]
+cluster_walltime=-t 00:60:0
+cluster_cpu=-N 1 -n 1
+```
+
+
+### Step 15- heatmap
+#### JOB: otu_heatmap_20
+```
+module load nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+OTUheatmap.R \
+  -t ./amplicontagger/assembled/feature_tables/feature_table_final_rarefied.tsv \
+  -o ./amplicontagger/assembled/heatmap \
+  -p OTU_heatmap_20 \
+  -n 20 \
+  -m ./mapping_file.tsv
+```
+Purpose:
+
+To generate an annotated heaptmap of the most 20 abundant OTUs. 
+
+.ini:
+```
+[otu_heatmap]
+n=20:75
+cluster_walltime=-t 10:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+#### JOB: otu_heatmap_75
+```
+module load nrc/R/3.4.0 nrc/nrc_tools_public/dev  && \
+OTUheatmap.R \
+  -t ./amplicontagger/assembled/feature_tables/feature_table_final_rarefied.tsv \
+  -o ./amplicontagger/assembled/heatmap \
+  -p OTU_heatmap_75 \
+  -n 75 \
+  -m ./mapping_file.tsv
+```
+Purpose:
+
+To generate an annotated heaptmap of the most 75 abundant OTUs.
+
+.ini:
+```
+[otu_heatmap]
+n=20:75
+cluster_walltime=-t 10:00:0
+cluster_cpu=-N 1 -n 1
+cluster_pmem=--mem=12000
+```
+
+### Step 16- blast
+#### JOB: blast
+The bastn step against NCBI nt is implemented to provide complementary information in case of ambiguous or suspucious taxonomic identification using the RDP classifier. In practice however, most hits will point to entries assigned as uncultured organisms as taxonomic identifier.
+
+```
+module load nrc/blast/2.6.0+ nrc/nrc_tools_public/dev  && \
+blastn \
+  -db $INSTALL_HOME/databases/ncbi_nt/nt \
+  -query ./amplicontagger/assembled/feature_tables/features.fasta \
+  -out ./amplicontagger/assembled/blast/blast.out \
+  -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle sskingdoms sscinames scomnames" \
+  -max_target_seqs 1 \
+  -num_threads 16 \
+  && keepBestBlastHit.pl --infile ./amplicontagger/assembled/blast/blast.out > ./amplicontagger/assembled/blast/blast.out.besthit
+```
+Purpose:
+
+To blast OTUs/ASV sequences against the NCBI nt database.
+
+.ini:
+```
+[blast]
+db=$INSTALL_HOME/databases/ncbi_nt/nt
+outfmt=6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle sskingdoms sscinames scomnames
+num_threads=16
+cluster_walltime=-t 24:00:0
+cluster_cpu=-N 1 -n 16
+cluster_pmem=--mem=72000
+```
+
+### Step 17- statistics
+#### JOB: count_report
+```
+module load nrc/nrc_tools_public/dev  nrc/perl/5.26.0 && \
+countReport.pl \
+ --file ./raw_reads/preprocessed.fastq.gz \
+ --file ./amplicontagger/duk/contam.fastq \
+ --file ./amplicontagger/duk/ncontam_phix.fastq \
+ --file ./amplicontagger/duk/ncontam_nphix.fastq \
+ --file ./amplicontagger/assembled/fastqs/ncontam_nphix_1.fastq \
+ --file ./amplicontagger/assembled/fastqs/ncontam_nphix_2.fastq \
+ --file ./amplicontagger/assembled/fastqs/assembly_complete/ncontam_nphix_trimmed.extendedFrags.fastq \
+ --file ./amplicontagger/assembled/fastqs/ncontam_nphix_trimmed.extendedFrags_QCpassed.fastq \
+ --name total_reads \
+ --name contaminants_reads \
+ --name phix_reads \
+ --name non_contam_non_phix_reads \
+ --name non_contam_non_phix_reads_1 \
+ --name non_contam_non_phix_reads_2 \
+ --name assembled_reads \
+ --name assembled_reads_QC_passed \
+ --analysisType assembled_clustered \
+ --barcodesDist ./amplicontagger/assembled/fastqs/ncontam_nphix_barcodes.txt \
+ --OTUtable ./amplicontagger/assembled/feature_tables/feature_table.tsv \
+ --obsTable ./amplicontagger/assembled/obs/obs.tsv \
+ > ./amplicontagger/assembled/countReport.tsv
+```
+Purpose:
+
+To generate a table documenting the read count through the various steps of the pipeline.
+
+.ini:
+```
+Default [DEFAULT] parameters.
+```
+
+### Step 18- deliverables
+#### JOB: deliverables_tarball
+
+```
+module load nrc/R/3.4.0 && \
+tar -zcvf ./amplicontagger/2019_05_29_Project_title_amplicontagger_complete.tar.gz --dereference --exclude='./amplicontagger/assembled/fastqs' \
+                                  --exclude='./amplicontagger/assembled/../duk' \
+                                  --exclude='./amplicontagger/assembled/fastqs' \
+                                  --exclude='./amplicontagger/assembled/alpha_div/alpha_rarefaction' \
+                                  --exclude='./amplicontagger/assembled/alpha_div/rarefaction' \
+                                  --exclude='./amplicontagger/assembled/feature_tables/rarefactions' \
+                                  ./mapping_file.tsv ./amplicontagger/assembled/
+```
+Purpose:
+
+To generate a tarball of the pipeline's most relevant outputs, including fastqs (excluding the original raw reads).
+
+.ini:
+```
+Default [DEFAULT] parameters.
+```
+
+# 3- Smart restart mechanism {#section3}
+One useful feature of AmpliconTagger is its built-in smart-restart mechanism. For instance, let's generate jobs for the first step of the pipeline by running the following command : ```amplicontagger.py -c ./AmpliconTagger.ini -s 1 -o . -j slurm -b barcodes.fasta -z ./pipeline.json  > ./commands.sh``` and let's have look at the job definition: 
+```
+#-------------------------------------------------------------------------------
+# JOB: validate_1_JOB_ID: validate_map_and_barcodes
+#-------------------------------------------------------------------------------
+JOB_NAME=validate_map_and_barcodes
+JOB_DEPENDENCIES=
+JOB_DONE=job_output/validate/validate_map_and_barcodes.ef11d3e6b518dd1a1ed1baff2a035f92.nrc.done
+JOB_OUTPUT_RELATIVE_PATH=$STEP/${JOB_NAME}_$TIMESTAMP.o
+JOB_OUTPUT=$JOB_OUTPUT_DIR/$JOB_OUTPUT_RELATIVE_PATH
+validate_1_JOB_ID=$(echo "#!/bin/sh
+rm -f $JOB_DONE && \
+set -o pipefail
+module load nrc/nrc_tools_public/dev  && \
+
+validateMapAndBarcodes.pl \
+  --infile_barcodes barcodes.fasta \
+  --infile_mapping_file ./mapping_file.tsv && \
+  touch ./amplicontagger/validateMapAndBarcodes.done
+NRC_STATE=\$PIPESTATUS
+echo NRC_exitStatus:\$NRC_STATE
+if [ \$NRC_STATE -eq 0 ] ; then touch $JOB_DONE ; fi
+exit \$NRC_STATE" | \
+sbatch --account=my_account_id --export=ALL --mail-type=END --mail-user=$JOB_MAIL -D $OUTPUT_DIR -o $JOB_OUTPUT -J $JOB_NAME -t 12:00:0  --mem=12000 -N 1 -n 1  | grep -o "[0-9]*")
+echo "$validate_1_JOB_ID    $JOB_NAME   $JOB_DEPENDENCIES   $JOB_OUTPUT_RELATIVE_PATH" >> $JOB_LIST
+
+```
+The value stored in the JOB_DONE variable ```JOB_DONE=job_output/validate/validate_map_and_barcodes.ef11d3e6b518dd1a1ed1baff2a035f92.nrc.done```  
+is actually an md5 signature of all the files creation date, names and sizes combined with all the job's parameters used to generate the job. Once properly executed on the compute cluster and an ```exit_status=0``` is returned, the file defined by the JOB_DONE variable will be touched (i.e. created) (```if [ \$NRC_STATE -eq 0 ] ; then touch $JOB_DONE ; fi```).  
+If we run the first step of the pipeline again (```amplicontagger.py -c ./AmpliconTagger.ini -s 1 -o . -j slurm -b barcodes.fasta -z ./pipeline.json  > ./commands.sh```), we'll find that no job was written in the standard output ```commands.sh``` file. This is because during the job generation process, the pipeline detected that this job was up to date, because:  
+1) infiles (barcodes and mapping file) of the job were older than the outfile (```validateMapAndBarcodes.done```) it generated,  
+2) no changes were done on the input files and in consequence,  
+3) the file size of the input files was also the same.  
+Overall, the md5 signature is identical between the executed job and the new Job object and in consequence, no new job is created. If we would have modified the header of one of the fasta headers in the fasta file and had rerun the pipeline, this job would have been re-generated, because the pipeline would have found discrepencies in one of these values and would have found differences in the old and new md5 signed .done file. This mechanism is useful in the context of random job failure because of a faulty compute node or simply if the pipeline operator is interested in modifying one or many variables of a given step of the pipeline.  
+Another instance where this mechanism is useful is when a job crashes because we didn't asked for enough memory or cores for its execution and SLURM detects this and kills off our job because the limits of the resources we asked for were not respected. When that happens, an exit_status other than 0 is returned for that offending job and the rest of the downstream dependant jobs are then killed by SLURM. Instead of manually going through each single job that went through to find which one returned a non-zero exit_status, the pipeline operator can simply rerun ```amplicontagger.py``` with the same parameters and see which jobs are generated.
+
+# 4- End results {#section4}
+
+The arguably most important results generated by the pipeline are the following files:
+
+## Read counts
+Contains read count summary throughout the different steps of the pipeline.
+```
+amplicontagger/assembled/countReport.tsv
+```
+
+## Qscores
+Qscore profiles of paired-end merged reads.
+``` 
+amplicontagger/assembled/qscores/qscores_assembled_QCpassed.pdf
+```
+Qscore profiles of separate R1 and R2 reads before merging. Informative if there is a problem with the reads merging process.
+```
+amplicontagger/assembled/qual_stats_unassembled.pdf
+```
+
+## OTU/ASV tables
+Contains the sequences in fasta format of all OTUs or ASVs
+```
+amplicontagger/assembled/feature_tables/features.fasta
+```
+OTU/ASV table containing all samples having a total read count > 0. The filtered suffix refers to filtered sample(s) or column(s).
+```
+amplicontagger/assembled/feature_tables/feature_table_filtered.tsv
+```
+OTU/ASV table containing only selected organisms. In this example, since the amplification primers used were targetting the V4 region, the ```organism_type=bacteriaArchaea``` in the .ini file was set to bacteriaArchaea. More specifically, this table contains OTUs/ASVs assigned to either k__Bacteria or k__Archaea only.
+```
+amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea_rarefied.tsv
+```
+
+Organism specific OTU/ASV table, rarefied using the consensus method described in the AmpliconTagger paper.
+```
+amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea_rarefied.tsv
+```
+Organism specific OTU/ASV table, rarefied using edgeR's RLE method.
+```
+amplicontagger/assembled/feature_tables/feature_table_filtered_bacteriaArchaea_normalized.tsv
+```
+
+Checkpoint tables. As described above, a final sanity check is performed on the two latter OTU/ASV tables and written with the suffix ```_final_```. In the vast majority of cases, the ```feature_table_final_normalized.tsv``` is the same as the ```feature_table_filtered_bacteriaArchaea_normalized.tsv``` file and the ```feature_table_final_rarefied.tsv``` is the same as the ```feature_table_filtered_bacteriaArchaea_rarefied.tsv``` file. These two tables are used to compute the taxonomic summaries and beta diversity metrics given by the pipeline.
+```
+amplicontagger/assembled/feature_tables/feature_table_final_normalized.tsv
+amplicontagger/assembled/feature_tables/feature_table_final_rarefied.tsv
+```
+
+## Alpha diversity
+Contains the alpha diversity values of chao1, observed OTUs (labelled observed_species.txt), shannon and simpson.
+```
+amplicontagger/assembled/alpha_div/alpha_chao1.tsv
+amplicontagger/assembled/alpha_div/alpha_richness.tsv
+amplicontagger/assembled/alpha_div/alpha_shannon.tsv
+amplicontagger/assembled/alpha_div/alpha_simpson.tsv
+```
+
+## Beta diversity
+
+Interactive 3d figures that can be opened in most internet browsers.
+```
+amplicontagger/assembled/beta_div/plots/3d_bray_curtis
+amplicontagger/assembled/beta_div/plots/3d_weighted_unifrac
+```
+Distance matrices. Files ending with the _rarefied suffix contain distance values from the rarefied consensus OTU table using the method described in the AmpliconTagger paper.
+```
+amplicontagger/assembled/beta_div/bray_curtis_feature_table_final_rarefied.tsv
+amplicontagger/assembled/beta_div/weighted_unifrac_feature_table_final_rarefied.tsv
+```
+
+Principal coordinates analysis tables computed from the distance matrices described above.
+```
+amplicontagger/assembled/beta_div/bray_curtis_feature_table_final_rarefied_coords.tsv
+amplicontagger/assembled/beta_div/weighted_unifrac_feature_table_final_rarefied_coords.tsv
+```
+
+## Blastn
+Results of BLASTn of each OTU/ASV sequence against NCBI nt. The file ending with .besthit contains the best hit for each query.
+```
+amplicontagger/assembled/blast/blast.out
+amplicontagger/assembled/blast/blast.out.besthit
+```
+
+## RDP classifier
+Raw output of the RDP classifier
+```
+amplicontagger/assembled/rdp/rdp.tsv
+```
+## Taxonomic profiles
+Taxonomic profile tables at L1=kindgom, L2=phylum, L3=class, L4=order, L5=family and L6=genus. Both in absolute (consensus rarefaction) or relative.
+abundance.
+```
+amplicontagger/assembled/tax_summary/absolute/feature_table_final_rarefied_L1.tsv
+amplicontagger/assembled/tax_summary/absolute/feature_table_final_rarefied_L2.tsv
+amplicontagger/assembled/tax_summary/absolute/feature_table_final_rarefied_L3.tsv
+amplicontagger/assembled/tax_summary/absolute/feature_table_final_rarefied_L4.tsv
+amplicontagger/assembled/tax_summary/absolute/feature_table_final_rarefied_L5.tsv
+amplicontagger/assembled/tax_summary/absolute/feature_table_final_rarefied_L6.tsv
+amplicontagger/assembled/tax_summary/relative/feature_table_final_rarefied_L1.tsv
+amplicontagger/assembled/tax_summary/relative/feature_table_final_rarefied_L2.tsv
+amplicontagger/assembled/tax_summary/relative/feature_table_final_rarefied_L3.tsv
+amplicontagger/assembled/tax_summary/relative/feature_table_final_rarefied_L4.tsv
+amplicontagger/assembled/tax_summary/relative/feature_table_final_rarefied_L5.tsv
+amplicontagger/assembled/tax_summary/relative/feature_table_final_rarefied_L6.tsv
+```
+## Phylogenetic tree
+Phylogenetic tree of all OTU/ASV representative sequences.
+```
+amplicontagger/assembled/fasttree/tree.fasttree
+```
+
+# 5- Preprocessing PacBio data {#section5}
+PacBio CCS data comes in a format that needs to be processed before submitting to the pipeline. PacBio CCS reads can be provided in both 5'-->3' and 3'-->5' orientation. When that is the case, reverse reads should be re-oriented in the 5'-->3' orientation. Below is an example of the tagsQC.pl execution to take care of that issue.
+
+From the nrc_tools_public repo, the following script can be run
+```
+# First download PacBio CCS reads to a directory labelled pacbio_downloaded_data
+# IMPORTANT: the fastq files inside the pacbio_downloaded_data directory have to be gzipped and their names have to end with the following suffix: *_R1.fastq.gz. 
+# Load the nrc_tools module
+module load nrc/nrc_tools_public/dev
+# Generate a readset file
+generateReadsetSheet.pl --indir ./pacbio_downloaded_data --type SINGLE_END > readset.tsv
+# And run 
+~/build/nrc_pipeline/pipelines/amplicontagger/preprocess_pacbio_amplicons.py -c ./AmpliconTagger.ini -r readset.tsv -s 1-1  -o . -j batch > ./commands.sh
+```
+This will generate the following jobs in standard output:
+```
+#JOB: Mock1 gunzip
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev && \
+gunzip -c /project/PROJECT_ID/projects/misc/rrnatagger_paper/pacbio_mock/preprocess_test/./pacbio_downloaded_data//Mock1_R1.fastq.gz > ./pacbio_preprocessed_reads/Mock1.fastq
+
+#JOB: fix_qscores_Mock1
+# This script will fix CCS qscores that are between 33 and 81. All Qscores having a value higher than 40 will be assigned a value of 40.
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev && \
+fixPacBioQscores.pl \
+  --infile ./pacbio_preprocessed_reads/Mock1.fastq \
+  > ./pacbio_preprocessed_reads/Mock1_phred33.fastq
+
+#JOB: cut_Mock1
+# Will cut Pacbio CSS to the same length and discard reads shorter than the specified length.
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev && \
+cutFastqToSpecificLength.pl \
+  --infile ./pacbio_preprocessed_reads/Mock1_phred33.fastq --final_length 1400 --outfile ./pacbio_preprocessed_reads/Mock1_phred33_1400.fastq
+
+#JOB: replace_illegal_char_Mock1
+# This simple script will delete all "\" characters in the headers of PacBio sequences. These "\" characters can break downstream steps. 
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev && \
+replaceIllegalCharPacBio.pl \
+  --infile ./pacbio_preprocessed_reads/Mock1_phred33_1400.fastq > ./pacbio_preprocessed_reads/Mock1_phred33_1400_nic.fastq
+
+#JOB: gzip_to_raw_reads_directory_Mock1
+rm -f $JOB_DONE && \
+module load nrc/perl/5.26.0 nrc/nrc_tools_public/dev && \
+gzip -c ./pacbio_preprocessed_reads/Mock1_phred33_1400_nic.fastq > ./raw_reads/Mock1_R1.fastq.gz
+```
+
+# 6- Job output folder {#section6}
+When a job is launched/submitted whether on the job scheduler or directly on the terminal with the ```batch``` option, the standard output and error are redirected and written in the ```./job_output/``` folder in the step subfolder that this job belongs to. For instance, consider the following job, where we have a ```JOB_OUTPUT_DIR``` set to ```/project/microbiome_genomics/projects/AAD_demo/job_output```. The clustering step will generate a subdirectory :
+```
+STEP=generate_clusters
+mkdir -p $JOB_OUTPUT_DIR/$STEP
+```
+Then in the generate_clusters_vsearch job, we have the following instructions which will define the file that will hold the standard output and error:
+```
+JOB_NAME=generate_clusters_vsearch
+JOB_DEPENDENCIES=
+JOB_OUTPUT_RELATIVE_PATH=$STEP/${JOB_NAME}_$TIMESTAMP.o
+```
+Finally, when the job is submitted to the job scheduler with the following command: ```sbatch --account=my_account_xyz --export=ALL --mail-type=END --mail-user=$JOB_MAIL -D $OUTPUT_DIR -o $JOB_OUTPUT -J $JOB_NAME -t 12:00:0  --mem=64000 -N 1 -n 16```, the ```-o $JOB_OUTPUT``` instructs the job scheduler were to write the standard output and error.
+
+Here is the complete chunk of instructions:
+
+```
+OUTPUT_DIR=/home/projects/AAD_demo
+JOB_OUTPUT_DIR=$OUTPUT_DIR/job_output
+TIMESTAMP=`date +%FT%H.%M.%S`
+JOB_LIST=$JOB_OUTPUT_DIR/AmpliconTagger_job_list_$TIMESTAMP
+mkdir -p $OUTPUT_DIR
+cd $OUTPUT_DIR
+
+#-------------------------------------------------------------------------------
+# STEP: generate_clusters
+#-------------------------------------------------------------------------------
+STEP=generate_clusters
+mkdir -p $JOB_OUTPUT_DIR/$STEP
+
+#-------------------------------------------------------------------------------
+# JOB: generate_clusters_1_JOB_ID: generate_clusters_vsearch
+#-------------------------------------------------------------------------------
+JOB_NAME=generate_clusters_vsearch
+JOB_DEPENDENCIES=
+JOB_DONE=job_output/generate_clusters/generate_clusters_vsearch.2a94a025dcd39720c532f1f2fb9deeb7.nrc.done
+JOB_OUTPUT_RELATIVE_PATH=$STEP/${JOB_NAME}_$TIMESTAMP.o
+JOB_OUTPUT=$JOB_OUTPUT_DIR/$JOB_OUTPUT_RELATIVE_PATH
+generate_clusters_1_JOB_ID=$(echo "#!/bin/sh
+rm -f $JOB_DONE && \
+set -o pipefail
+module load nrc/vsearch/2.7.1 nrc/nrc_tools_public/dev nrc/perl/5.26.0 && \
+
+clusteringShortReadsVsearch.pl \
+ --infile_fastq ./amplicontagger/reads_12/fastqs/ncontam_nphix_trimmed.extendedFrags_QCpassed.fastq \
+ --ref_db /project/6008026/databases/fasta/broad/gold.fa \
+ --barcodes barcodes.fasta \
+ --outdir ./amplicontagger/reads_12/obs \
+ --first_round 0.99 \
+ --second_round 0.97 \
+ --lowAbunCutOff 25 \
+ --num_threads 16
+NRC_STATE=\$PIPESTATUS
+echo NRC_exitStatus:\$NRC_STATE
+if [ \$NRC_STATE -eq 0 ] ; then touch $JOB_DONE ; fi
+exit \$NRC_STATE" | \
+sbatch --account=rrg-yergeaue --export=ALL --mail-type=END --mail-user=$JOB_MAIL -D $OUTPUT_DIR -o $JOB_OUTPUT -J $JOB_NAME -t 12:00:0  --mem=64000 -N 1 -n 16  | grep -o "[0-9]*")
+echo "$generate_clusters_1_JOB_ID   $JOB_NAME   $JOB_DEPENDENCIES   $JOB_OUTPUT_RELATIVE_PATH" >> $JOB_LIST
+```
+
+# 7- Integrating more options in a given bioinformatics package {#section7}
+One useful feature of AmpliconTagger (and the GenPipes WMS) is the possibility to customize each step of a workflow. For instance, if we would want to add an option for DADA2, we would need to add a few lines of code to the ```clustering_dada2``` function found in the  ```bio/microbial_ecology.py``` file. As a reminder, the ```clustering_dada2``` function is called from the main pipeline script/wrapper ```amplicontagger.py```:
+
+```{python eval=FALSE, python.reticulate=FALSE}
+job = rrna_amplicons.clustering_dada2(
+    barcodes_done_files,
+    os.path.join(self._lib_type_dir, "obs", "demultiplexed"),
+    os.path.join(self._lib_type_dir, "obs", "dada2"),
+    os.path.join(self._lib_type_dir, "obs", "dada2", "all_nochimera.tsv"),
+    os.path.join(self._lib_type_dir, "obs", "dada2", "dada2.done"),
+    data_type
+)
+job.name = "generate_asv_dada2"
+job.subname = "clustering"
+jobs.append(job)
+
+```
+where a job object will be instanciated in the ```clustering_dada2``` function of the ```bio/rrna_amplicons.py``` library:
+
+```{python eval=FALSE, python.reticulate=FALSE}
+def clustering_dada2(infiles_done, indir, outdir, outfile, done_file, data_type):
+
+    job = Job(
+        infiles_done,
+        [outfile, done_file],
+        [
+            ['R', 'module_R'],
+            ['tools', 'module_tools'],
+            ['perl', 'module_perl']
+        ]
+    )
+
+    job.command="""
+dada2.R -i {indir} \\
+ -o {outdir} \\
+ -t {data_type} \\
+ -p {num_threads} \\
+ -l {trimLeft} \\
+ -m {maxEE} \\
+ -c {truncQ} \\
+ -q {minQ} && touch {done_file}""".format(
+    indir = indir,
+    outdir = outdir,
+    data_type = data_type,
+    num_threads = config.param('clustering', 'num_threads', 1, 'int'),
+    trimLeft = config.param('clustering', 'trimLeft', 1, 'int'),
+    maxEE = config.param('clustering', 'maxEE', 1, 'int'),
+    truncQ = config.param('clustering', 'truncQ', 1, 'int'),
+    minQ = config.param('clustering', 'minQ', 1, 'int'),
+    done_file = done_file
+)
+```
+In the current implementation, we only included 3 parameters specific to DADA2. If for instance at some point we realize that it would be useful to implement support for the ```nbases``` option for the ```learnErrors()``` function of the DADA2 package, we would need to add a line specifying this option in the ```clustering_dada2``` function:
+
+```{python eval=FALSE, python.reticulate=FALSE}
+def clustering_dada2(infiles_done, indir, outdir, outfile, done_file, data_type):
+
+    job = Job(
+        infiles_done,
+        [outfile, done_file],
+        [
+            ['R', 'module_R'],
+            ['tools', 'module_tools'],
+            ['perl', 'module_perl']
+        ]
+    )
+
+    # Add the option -n {nbases} below
+    job.command="""
+dada2.R -i {indir} \\
+ -o {outdir} \\
+ -t {data_type} \\
+ -p {num_threads} \\
+ -l {trimLeft} \\
+ -m {maxEE} \\
+ -c {truncQ} \\
+ -n {nbases} \\
+ -q {minQ} && touch {done_file}""".format(
+    indir = indir,
+    outdir = outdir,
+    data_type = data_type,
+    num_threads = config.param('clustering', 'num_threads', 1, 'int'),
+    trimLeft = config.param('clustering', 'trimLeft', 1, 'int'),
+    maxEE = config.param('clustering', 'maxEE', 1, 'int'),
+    truncQ = config.param('clustering', 'truncQ', 1, 'int'),
+    minQ = config.param('clustering', 'minQ', 1, 'int'),
+    # Add the option support included in the .ini file.
+    nbases = config.param('clustering', 'nbases', 1, 'int'),
+    done_file = done_file
+```
+We would also need to add the option ```nbases``` in the ```.ini``` file under the ```[clustering]``` category.
+```
+[clustering]
+#clustering_method accepted values: "deblur", "dnaclust" , "dada2" or "vsearch"
+clustering_method=dada2
+#reads_type accepted values: "short_reads" or "long_reads".
+reads_type=long_reads
+min_reads=2
+
+#parameters for dnaclust and vsearch
+first_round=0.99
+second_round=0.97
+
+#parameters for deblur.
+trim_length=249
+indel_max=5
+min_size=0
+
+#parameters for dada2: qc done in previous step (tags_QC). leave maxEE=2 as this paramter is not implemented in tagsQC.pl
+trimLeft=0
+maxEE=2
+truncQ=0
+minQ=0
+### Add nbases option HERE!
+nbases=1e+08
+###
+
+#Scheduler parameters
+num_threads=16
+cluster_walltime=-t 12:00:0
+cluster_cpu=-N 1 -n 16
+cluster_queue=
+cluster_pmem=--mem=64000
+```
+
+The final step is to add suport for this new ```nbases``` option in the ```dada2.R``` wrapper in the ```nrc_tools_public``` repository. Let's first add the support for adding an option element starting at line 218 in the ```dada2.R``` wrapper script where we have the following chunk of code:
+
+```{R eval=FALSE, R.reticulate=FALSE}
+usage=function(errM) {
+        cat("\nUsage : Rscript dada2.R [option] <Value>\n")
+        cat("       -i        : indir\n")
+        cat("       -o        : outdir\n")
+        cat("       -t        : type\n")
+        cat("       -p        : num_threads\n")
+        cat("       -l        : trimLeft\n")
+        cat("       -m        : maxEE\n")
+        cat("       -c        : truncQ\n")
+        cat("       -q        : minQ\n")
+}
+
+ARG = commandArgs(trailingOnly = T)
+
+if(length(ARG) < 8) {
+    usage("missing arguments")
+}
+print("ARGs")
+print(ARG)
+
+## get arg variables
+for (i in 1:length(ARG)) {
+    if(ARG[i] == "-i") {
+        indir =     ARG[i+1]
+    }else if (ARG[i] == "-o") {
+        outdir =    ARG[i+1]
+    }else if( ARG[i] == "-t"){
+       type =       ARG[i+1]
+    }else if( ARG[i] == "-p"){
+      num_threads = ARG[i+1]
+    }else if( ARG[i] == "-l"){
+       trimLeft.a = ARG[i+1]
+    }else if( ARG[i] == "-m"){
+       maxEE.a =    ARG[i+1]
+    }else if( ARG[i] == "-c"){
+       truncQ.a =   ARG[i+1]
+    }else if( ARG[i] == "-q"){
+       minQ.a =     ARG[i+1]
+    }   
+}
+
+doDada2(indir, outdir, type, num_threads, trimLeft.a, maxEE.a, truncQ.a, minQ.a)
+
+```
+... that we wish to bring to this:
+
+```{R eval=FALSE, R.reticulate=FALSE}
+usage=function(errM) {
+        cat("\nUsage : Rscript dada2.R [option] <Value>\n")
+        cat("       -i        : indir\n")
+        cat("       -o        : outdir\n")
+        cat("       -t        : type\n")
+        cat("       -p        : num_threads\n")
+        cat("       -l        : trimLeft\n")
+        cat("       -m        : maxEE\n")
+        cat("       -c        : truncQ\n")
+        cat("       -q        : minQ\n")
+        ## Here add option for nbase option
+        cat("       -n        : nbases\n")
+}
+
+ARG = commandArgs(trailingOnly = T)
+
+if(length(ARG) < 9) {
+    usage("missing arguments")
+}
+print("ARGs")
+print(ARG)
+
+## get arg variables
+for (i in 1:length(ARG)) {
+    if(ARG[i] == "-i") {
+        indir =     ARG[i+1]
+    }else if (ARG[i] == "-o") {
+        outdir =    ARG[i+1]
+    }else if( ARG[i] == "-t"){
+       type =       ARG[i+1]
+    }else if( ARG[i] == "-p"){
+      num_threads = ARG[i+1]
+    }else if( ARG[i] == "-l"){
+       trimLeft.a = ARG[i+1]
+    }else if( ARG[i] == "-m"){
+       maxEE.a =    ARG[i+1]
+    }else if( ARG[i] == "-c"){
+       truncQ.a =   ARG[i+1]
+    }else if( ARG[i] == "-q"){
+       minQ.a =     ARG[i+1]
+   
+    # Add decision for the -n argument.
+    }else if( ARG[i] == "-n"){
+       nbases.a =  ARG[i+1]
+    }  
+   
+}
+
+# Add nbases.a variable to the doDada2 function
+doDada2(indir, outdir, type, num_threads, trimLeft.a, maxEE.a, truncQ.a, minQ.a, nbases.a)
+
+```
+
+Then in the ```doDada2``` function (also in the same ```dada2.R``` file) we have the following code starting at line 8:
+```{R eval=FALSE, R.reticulate=FALSE}
+doDada2 <- function(indir, outdir, type, num_threads,
+                    trimLeft.a, maxEE.a, truncQ.a, minQ.a) {
+   ...
+}
+   
+```
+for which we'll add the nbases.a variable:
+```{R eval=FALSE, R.reticulate=FALSE}
+doDada2 <- function(indir, outdir, type, num_threads,
+                    trimLeft.a, maxEE.a, truncQ.a, minQ.a, nbases.a) {
+    ...
+}  
+                    
+```
+The last step is to actually add the variable into the ```learnErrors()``` function. In the ```dada2.R``` script this function is invoked at four different places depending on the reads configuration. If paired-end short reads, ```learnErrors()``` will be called at lines 114 and 116. We just have to change this chunk of code:
+```{R eval=FALSE, R.reticulate=FALSE}
+      # Learn forward error rates
+      errF <- learnErrors(filtFs, nbases=1e8, multithread=num_threads, verbose=TRUE)
+      # Learn reverse error rates
+      errR <- learnErrors(filtRs, nbases=1e8, multithread=num_threads, verbose=TRUE)
+```
+for the following:
+```{R eval=FALSE, R.reticulate=FALSE}
+      # Learn forward error rates
+      errF <- learnErrors(filtFs, nbases=nbases.a, multithread=num_threads, verbose=TRUE)
+      # Learn reverse error rates
+      errR <- learnErrors(filtRs, nbases=nbases.a, multithread=num_threads, verbose=TRUE)
+```
+
+We should be ready to go with this new option implementation. Adding an option for DADA2 is one of the most complex scenario because DADA2 needs to be run in the R language. R language packages are usually encapsulated in a wrapper script for ease of use. For compiled software written in C or Java like BBDUK, it would have been easier to add an option directly in the ```bbduk``` function of the  ```bio/rrna_amplicons.py``` script as this package does need to be wrapped inside a Perl of R script.
+
+# 8- Citation {#section8}
+If you use AmpliconTagger, please cite :
+
+Julien Tremblay, Etienne Yergeau, Systematic processing of ribosomal RNA gene amplicon sequencing data, GigaScience, Volume 8, Issue 12, December 2019, giz146, https://doi.org/10.1093/gigascience/giz146
