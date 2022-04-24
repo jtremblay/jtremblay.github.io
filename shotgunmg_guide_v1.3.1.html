@@ -1660,8 +1660,9 @@ src: url(data:application/font-sfnt;base64,AAEAAAARAQAABAAQR0RFRgs+Cz8AAjwQAAAAQ
       <li><a href="#annotations">Annotations</a></li>
       <li><a href="#alpha-diversity">Alpha diversity</a></li>
       <li><a href="#beta-diversity">Beta diversity</a></li>
-      <li><a href="#diamond-blastp-output-of-genes-vs-kegg-genes-db">DIAMOND
-      BLASTp output of genes vs KEGG genes DB</a></li>
+      <li><a href="#diamond-blastp-output-of-genes-vs-kegg-genes-db-or-kofamscan-results">DIAMOND
+      BLASTp output of genes vs KEGG genes DB <em>or</em> kofamscan
+      results</a></li>
       <li><a href="#diamond-blastp-output-of-genes-vs-ncbi-nr-db">DIAMOND
       BLASTp output of genes vs NCBI nr DB</a></li>
       <li><a href="#hmmscan-output-of-genes-vs-pfam-a-db.">hmmscan
@@ -2770,10 +2771,16 @@ matrices described above.</p>
 betadiv/bray_curtis_contig_bacteriaArchaea/bray_curtis_contig_bacteriaArchaea_coords.tsv
 betadiv/bray_curtis_gene_abundance/bray_curtis_gene_abundance_coords.tsv</code></pre>
 </div>
-<div id="diamond-blastp-output-of-genes-vs-kegg-genes-db" class="section level2">
-<h2>DIAMOND BLASTp output of genes vs KEGG genes DB</h2>
-<pre><code>annotations/blastp_kegg.tsv
-annotations/blastp_kegg_parsed.tsv</code></pre>
+<div id="diamond-blastp-output-of-genes-vs-kegg-genes-db-or-kofamscan-results" class="section level2">
+<h2>DIAMOND BLASTp output of genes vs KEGG genes DB <em>or</em>
+kofamscan results</h2>
+<pre><code># Diamond blastp vs KEGG genes db (if access to KEGG license)
+annotations/blastp_kegg.tsv
+annotations/KOs_parsed.tsv
+
+# kofamscan (free - no license required)
+annotations/kofamscan.tsv
+annotations/KOs_parsed.tsv</code></pre>
 </div>
 <div id="diamond-blastp-output-of-genes-vs-ncbi-nr-db" class="section level2">
 <h2>DIAMOND BLASTp output of genes vs NCBI nr DB</h2>
