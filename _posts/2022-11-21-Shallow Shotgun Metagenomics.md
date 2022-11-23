@@ -2,6 +2,8 @@
 layout: post
 category : Metagenomics, pipelines, publications
 tagline: ""
+title: "Shallow shotgun metagenomics, shallow sequencing, sequencing depth"
+description: "Information regarding shallow sequencing for shotgun metagenomic projects. What sequencing depth to target for shotgun metagenomic projects?"
 tags : [Shotgun metagenomics, bioinformatics, high performance computing, metagenomics, Shallow sequencing]
 ---
 {% include JB/setup %}
