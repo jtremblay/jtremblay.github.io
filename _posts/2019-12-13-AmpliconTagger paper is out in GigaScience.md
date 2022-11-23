@@ -2,12 +2,14 @@
 layout: post
 category : pipelines, publications
 tagline: ""
+title: 'AmpliconTagger pipeline, 16S 18S ITS rRNA amplicons. Marker gene pipeline' 
+description: 'Publication of AmpliconTagger pipeline for 16S/18S/ITS rRNA amplicons and other marker genes. GigaScience'
 tags : [AmpliconTagger, bioinformatics, high performance computing, metagenomics, 16S rRNA amplicons]
 ---
 {% include JB/setup %}
 
 
-## AmpliconTagger pipeline
+### AmpliconTagger pipeline
 It was a long road, but our marker gene pipeline is finally published in [GigaScience](https://academic.oup.com/gigascience/article/8/12/giz146/5670612) and I thought it would be interesting to provide a little historical background on its development.
 
 ![Timeline](/images/post_2019-12-12.png)
