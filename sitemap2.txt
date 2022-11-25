@@ -10,6 +10,7 @@ https://jtremblay.github.io/viz/taxonomy_SCE004.orig/taxonomy_bars_16S.html
 https://jtremblay.github.io/viz/taxonomy_SCE004.orig/taxonomy_bars_ITS.html
 https://jtremblay.github.io/viz/taxonomy_SCE004.orig/taxonomy_lines_16S.html
 https://jtremblay.github.io/viz/viz.html
+https://jtremblay.github.io/viz/prenomsqc.html
 https://jtremblay.github.io/amplicontagger.html
 https://jtremblay.github.io/amplicontagger_guide.html
 https://jtremblay.github.io/pages.html
