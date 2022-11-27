@@ -1,25 +1,25 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="Interactive vizualization D3" content="Vizualization, D3.js, D3, barcharts, linecharts, liste prénoms les plus populaires quebec">
 
-    <title>{{ page.title }}</title>
-    {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
-    <meta name="Julien Tremblay" content="Bioinformatics, Bioinformatics pipeline, High-resolution shotgun metagenomics, 16S rRNA, 16S rRNA gene amplicons pipeline, D3, D3.js, Data vizualization">
+    <title>Visualizations</title>
+    
 
     <!-- Enable responsive viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Bootstrap styles -->
-    <link href="{{ ASSET_PATH }}/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/themes/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <!-- Optional theme -->
-    <link href="{{ ASSET_PATH }}/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="/assets/themes/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet">
     <!-- Sticky Footer -->
-    <link href="{{ ASSET_PATH }}/bootstrap/css/bs-sticky-footer.css" rel="stylesheet">
+    <link href="/assets/themes/bootstrap/css/bs-sticky-footer.css" rel="stylesheet">
     
     <!-- Custom styles -->
-    <link href="{{ ASSET_PATH }}/css/style.css?body=1" rel="stylesheet" type="text/css" media="all">
+    <link href="/assets/themes/bootstrap-3/css/style.css?body=1" rel="stylesheet" type="text/css" media="all">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -37,8 +37,8 @@
     -->
 
     <!-- atom & rss feed -->
-    <link href="{{ BASE_PATH }}{{ site.JB.atom_path }}" type="application/atom+xml" rel="alternate" title="Sitewide ATOM Feed">
-    <link href="{{ BASE_PATH }}{{ site.JB.rss_path }}" type="application/rss+xml" rel="alternate" title="Sitewide RSS Feed">
+    <link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Sitewide ATOM Feed">
+    <link href="/rss.xml" type="application/rss+xml" rel="alternate" title="Sitewide RSS Feed">
 
   </head>
 
@@ -53,7 +53,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <!--<a class="navbar-brand" href="{{ HOME_PATH }}">{{ site.title }}</a>-->
+          <!--<a class="navbar-brand" href="/">Jekyll Bootstrap</a>-->
         </div>
 
         <!-- Collect the nav links, forms, and other content for toggling -->
@@ -67,7 +67,7 @@
                     <div class="ch-info">
                       <div class="ch-info-front ch-img-0"><h4>Home</h4></div>
                       <div class="ch-info-back">
-                        <a href="/index.html"><h3>Home</h3></a>
+                        <a href="https://jtremblay.github.io"><h3>Home</h3></a>
                       </div>
                     </div>
                   </div>
@@ -80,7 +80,7 @@
                     <div class="ch-info">
                       <div class="ch-info-front ch-img-1"><h4>Archive</h4></div>
                       <div class="ch-info-back">
-                        <a href="/archive.html"><h3>Archive</h3></a>
+                        <a href="https://jtremblay.github.io/archive.html"><h3>Archive</h3></a>
                       </div>
                     </div>
                   </div>
@@ -93,7 +93,7 @@
                     <div class="ch-info">
                       <div class="ch-info-front ch-img-2"><h4>Categories</h4></div>
                       <div class="ch-info-back">
-                        <a href="/categories.html"><h3>Categories</h3></a>
+                        <a href="https://jtremblay.github.io/categories.html"><h3>Categories</h3></a>
                       </div>
                     </div>
                   </div>
@@ -106,7 +106,7 @@
                     <div class="ch-info">
                       <div class="ch-info-front ch-img-3"><h4>Pages</h4></div>
                       <div class="ch-info-back">
-                        <a href="/pages.html"><h3>Pages</h3></a>
+                        <a href="https://jtremblay.github.io/pages.html"><h3>Pages</h3></a>
                       </div>
                     </div>
                   </div>
@@ -154,11 +154,14 @@
 
             </ul>
 
-            <!--
-            {% assign pages_list = site.pages %}
-            {% assign group = 'navigation' %}
-            {% include JB/pages_list %}
-            -->
+      	<!--<li><a href="/archive.html">Archive</a></li>
+
+      	<li><a href="/categories.html">Categories</a></li>
+
+      	<li><a href="/pages.html">Pages</a></li>
+
+      	<li><a href="/tags.html">Tags</a></li>
+      	-->
 
           </ul>
           <form class="navbar-form navbar-right" role="search">
@@ -171,25 +174,78 @@
       </nav>
 
       <div class="container">
-        {{ content }}
+        
+<div class="page-header">
+  <!--<h1>Microbiome lounge  <small></small></h1>
+  <p>I am a Bioinformatics Scientist - currently a Research Officer at the National Research Council Canada. My interests are in genomics R&D and in
+    developing end-to-end bioinformatics pipelines geared for environmental genomics data</p>-->
+
+  <p><a href='https://linkedin.com/in/julien-tremblay-32b88835'><img src='/images/linkedin.png' alt='linkedin' width='42' height='42'></a>
+    <a href='https://scholar.google.ca/citations?user=sbA3Bh8AAAAJ&hl=en&oi=ao'><img src='/images/gscholar.png' alt='gscholar' width='42' height='42'></a>
+    <a href='https://twitter.com/julio_514'><img src='/images/twitter.png' alt='twitter' width='42' height='42'></a>
+    <a href='https://github.com/jtremblay'><img src='/images/github.png' alt='github' width='120' height='42'></a>
+    <a href='https://bitbucket.org/jtremblay514/'><img src='/images/bitbucket_icon.png' alt='bbucket' width='42' height='42'></a>
+    <a href='https://hub.docker.com/u/julio514'><img src='/images/dockerhub.png' alt='github' width='42' height='42'></a>
+    <a href='https://jtremblay.github.io/amplicontagger.html'><img src='/images/amplicontagger_logo.png' alt='amplicontagger' width='166' height='23'></a>
+    <a href='https://jtremblay.github.io/shotgunmg.html'><img src='/images/shotgunMG_logo.png' alt='shotgunmg' width='156' height='30'></a>
+    <a href='https://observablehq.com/@jtremblay'><img src='/images/qq4vXsM7_40x40.png' alt='observablehq' width='40' height='40'></a>
+  </p>
+
+</div>
+
+<div class="row">
+   <div class="col-xs-12">
+
+      <h2 id="sample-posts">Visualizations</h2>
+
+
+      <p>Public visualizations.</p>
+
+      <ul class="posts">
+  
+         <li><a href="/PipelineViewer/amplicontagger.html"> Have a look at my Pipeline Viewer tool.</a></li>
+         <li><a href="/viz/prenomsqc/prenomsqc.html"> Most popular first names in Quebec from 1980 to 2018.</a></li>
+         <li>Silage microbiome paper
+             <ul><a href="/viz/taxonomy_SCE004/taxonomy_bars_16S.html">16S interactive taxonomic profiles - bar charts</a></ul>
+             <ul><a href="/viz/taxonomy_SCE004/taxonomy_bars_ITS.html">ITS interactive taxonomic profiles - bar charts</a></ul>
+             <ul><a href="/viz/taxonomy_SCE004/taxonomy_lines_16S.html">16S interactive taxonomic profiles - zoomable line charts</a></ul>
+             <ul><a href="/viz/taxonomy_SCE004/taxonomy_lines_ITS.html">ITS interactive taxonomic profiles - zoomable line charts</a></ul>
+         </li>
+         <li>Gut microbiome exposed to amoxicillin paper
+             <ul><a href="/viz/taxonomy_AAD/taxonomy_lines.html">16S interactive taxonomic profiles - line charts</a></ul>
+             <ul><a href="/viz/taxonomy_AAD/taxonomy_bars.html">16S interactive taxonomic profiles - bar charts</a></ul>
+         </li>
+      </ul>
+   </div>
+</div>
+
+
       </div>
 
     </div>
 
     <div id="footer">
       <div class="container">
-        <p>
-           <h7>&copy; {{ site.time | date: '%Y' }} {{ site.author.name }}</h7>
+          <p><h7>&copy; 2020 Julien Tremblay</h7>
+          <!--with help from <a href="http://jekyllbootstrap.com" target="_blank" title="The Definitive Jekyll Blogging Framework">Jekyll Bootstrap</a>
+          and <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>-->
         </p>
       </div>
     </div>
-
-    {% include JB/analytics %}
-
+    
 
     <!-- Latest compiled and minified JavaScript, requires jQuery 1.x (2.x not supported in IE8) -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-    <script src="{{ ASSET_PATH }}/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/assets/themes/bootstrap-3/bootstrap/js/bootstrap.min.js"></script>
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+            m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        ga('create', 'UA-75399562-1', 'auto');
+        ga('send', 'pageview');
+    </script>
   </body>
 </html>
+
