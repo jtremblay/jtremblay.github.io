@@ -144,7 +144,7 @@
                     ]
     ]
 
-    d3.tsv('otu_table_final_normalized_rel_L6.txt')
+    d3.tsv('/assets/posts/2014-05-04/otu_table_final_normalized_rel_L6.txt')
         .then(function(data) {
             // First sort matrix according to sum of each taxon, so that we have the most n (default=20) abundant taxa.
             var keys = data.columns.slice(1);
