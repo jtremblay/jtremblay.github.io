@@ -177,7 +177,7 @@
             // we need to open mapping file and integrate mapping file data with the data3 object.
             // We will by default group the data by Treatment - we assume that there is a column labeled
             // Treatment in the mapping tsv file.
-            d3.tsv('weighted_unifrac_otu_table_final_normalized_coords.tsv')
+            d3.tsv('/assets/posts/2014-05-04/weighted_unifrac_otu_table_final_normalized_coords.tsv')
                 .then(function(dataCoords) {
                     // First sort matrix according to sum of each taxon, so that we have the most n (default=20) abundant taxa.
                     console.log("[pcoa] data:");
