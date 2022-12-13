@@ -5,25 +5,25 @@
 	<title>Taxonomy stacked bar charts</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">-->
-    <link rel="stylesheet" href="/posts/2014-05-04/bootstrap.min.css">
-    <link rel="stylesheet" href="/posts/2014-05-04/myStyle.css">
-    <script src="/posts/2014-05-04/jquery.min.js"></script>
-    <script src="/posts/2014-05-04/popper.min.js"></script>                                                                 
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="myStyle.css">
+    <script src="jquery.min.js"></script>
+    <script src="popper.min.js"></script>                                                                 
     <!--<script src="bootstrap.bundle.min.js"</script>-->
     <!--<script src="bootstrap.bundle.js"</script>-->
-    <script src="/posts/2014-05-04/bootstrap.min.js"></script>      
-    <script src="/posts/2014-05-04/isotope.pkgd.min.js"></script>
+    <script src="bootstrap.min.js"></script>      
+    <script src="isotope.pkgd.min.js"></script>
     <!-- Load d3.js -->                                                  
     <!--<script src="https://d3js.org/d3.v5.js"></script>-->
-    <script src="/posts/2014-05-04/d3.v5.js"></script>
-    <script src="/posts/2014-05-04/taxonomyCharts.js"></script>
-    <script src="/posts/2014-05-04/scatterCharts_v2.js"></script>
+    <script src="d3.v5.js"></script>
+    <script src="taxonomyCharts.js"></script>
+    <script src="scatterCharts.js"></script>
     <!-- <script src="lineChartsMultiplePanels_v5.js"></script> -->
-    <script src="/posts/2014-05-04/packery.pkgd.min.js"></script>
-    <script src="/posts/2014-05-04/draggabilly.pkgd.min.js"></script>
+    <script src="packery.pkgd.min.js"></script>
+    <script src="draggabilly.pkgd.min.js"></script>
     <link href="https://fonts.googleapis.com/css?family=Monofett&display=swap" rel="stylesheet"> 
-    <script src="/posts/2014-05-04/myIsotopeBars.js"></script>
-    <script src="/posts/2014-05-04/myPackeryBars.js"></script>
+    <script src="myIsotopeBars.js"></script>
+    <script src="myPackeryBars.js"></script>
 
     <style>
     </style>
@@ -92,10 +92,7 @@
               <input type="checkbox"  value=".v5" id="btnVisit5">Visit 5</input>
           </label>
       </div>
-      <div id="tooltip">
-      </div>
-      <div id="legendAreaScatter" class="col">
-      </div>
+      <div id="tooltip"></div>
   </div>
   <br>
   <!--<div id="viz"></div>-->
@@ -104,10 +101,10 @@
     </div>
     <div id="vizBars" class="col">
     </div>
-  </div>
-  <div class="row">
     <div id="legendArea" class="col">
     </div>
+  </div>
+  <div class="row">
     <div id="vizContext" class="col">
     </div>
   </div>
@@ -220,13 +217,11 @@
                                         
                             // Once nested, call chart(s)
                             // If Stacked bar charts.
-                            
                             updatableChart = barCharts().fillColors(colors[2]).data(merged2);
-                            /*
                             d3.select('#vizBars').call(updatableChart);
                             doIsotopeBars();
                             doPackeryBars();
-                            */
+                          
 
                             // Then do pcoa
                             mappingDataCoords = mappingData;
