@@ -1,6 +1,6 @@
 ---
 layout: page
-title: the microbiome data lab
+title: Julien Tremblay, PhD
 tagline: 
 ---
 
