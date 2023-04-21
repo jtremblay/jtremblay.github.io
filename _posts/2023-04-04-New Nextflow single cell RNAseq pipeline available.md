@@ -9,7 +9,7 @@ tags : [Single cell, scrnaseq, bioinformatics, high performance computing]
 {% include JB/setup %}
 
 ### New Nextflow single cell RNAseq pipeline available
-My new Single cell scrnaseq pipeline is available here: [SingleCell (scrnaseq) Nextflow pipeline](https://github.com/jtremblay/SingleCell). 
+My new Single cell scrnaseq pipeline is available here: [SingleCell Nextflow pipeline](https://github.com/jtremblay/SingleCell). 
 
 I've also included an example of an R workflow using among other the Seurat package:
 
