@@ -7,8 +7,7 @@ tagline:
 
 {% include JB/setup %}
 
-<p>I am a bioinformatics data scientist. My interests are in genomics R&D and in developing end-to-end bioinformatics (including downstream statistical analyses) pipelines geared for a variety of genomics data types. 
-I also develop visualization supports applied to various kind of data.</p>
+<p>I am an expert in bioinformatics data science with extensive experience (10+ years) in the fields of bioinformatics, genomics, metagenomics, RNA-seq, microbiome studies, high performance computing, data visualization, statistics, machine learning. I have a deep knowledge of bioinformatics pipeline architecture (including Workflow Management Systems and job schedulers integration; i.e. Nextflow; GenPipes), engineering, design, coding and implementation for massive datasets processing. I also have in-depth expertise in the field of high-throughput sequencing, including knowledge of industry trends and practices. I am highly skilled with demonstrated proficiency in R, Python, Bash, Perl and Javascript languages. I also develop visualization supports applied to various kind of data.</p>
 
   <p>
     <a href='https://linkedin.com/in/julien-tremblay-32b88835'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a>
