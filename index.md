@@ -7,7 +7,8 @@ tagline:
 
 {% include JB/setup %}
 
-<p>I am a bioinformatics data scientist. My interests are in microbiome genomics R&D and in developing end-to-end bioinformatics pipelines geared for environmental genomics data. I also develop visualization supports applied to various kind of data.</p>
+<p>I am a bioinformatics data scientist. My interests are in genomics R&D and in developing end-to-end bioinformatics (including downstream statistical analyses) pipelines geared for a variety of genomics data types. 
+I also develop visualization supports applied to various kind of data.</p>
 
   <p>
     <a href='https://linkedin.com/in/julien-tremblay-32b88835'><img src='images/linkedin.png' alt='linkedin' width='42' height='42'></a>
