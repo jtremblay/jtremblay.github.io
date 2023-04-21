@@ -2,8 +2,8 @@
 layout: post
 category : Single Cell, scrnaseq, bioinformatics
 tagline: ""
-title: "New Nextflow single cell RNAseq pipeline available (SingleCell)"
-description: ""Nextflow single cell RNAseq pipeline available (SingleCell)
+title: "New Nextflow single cell RNAseq pipeline available"
+description: ""Nextflow single cell RNAseq pipeline available"
 tags : [Single cell, scrnaseq, bioinformatics, high performance computing]
 ---
 {% include JB/setup %}
