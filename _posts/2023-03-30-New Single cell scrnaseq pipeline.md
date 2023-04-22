@@ -15,4 +15,4 @@ I've also included an example of an R workflow using among other the Seurat pack
 
 [https://jtremblay.github.io/scrna_tutorial_part_1.html](https://jtremblay.github.io/scrna_tutorial_part_1.html)
 
-[https://jtremblay.github.io/scrna_tutorial_part_1.html](https://jtremblay.github.io/scrna_tutorial_part_2.html)
+[https://jtremblay.github.io/scrna_tutorial_part_2.html](https://jtremblay.github.io/scrna_tutorial_part_2.html)
