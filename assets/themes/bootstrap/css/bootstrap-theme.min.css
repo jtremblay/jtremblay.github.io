@@ -312,7 +312,7 @@
 /*Common */
 
 .ch-grid {
-    margin: 10px 0 0 0;
+    margin: 5px 0 0 0;
     padding: 0;
     list-style: none;
     display: block;
@@ -331,8 +331,8 @@
 }
 
 .ch-grid li {
-    width: 130px;
-    height: 130px;
+    width: 120px;
+    height: 20px;
     display: inline-block;
     margin: 5px;
 }
@@ -342,7 +342,7 @@
 .ch-item {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
+    border-radius: 5%;
     position: relative;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     cursor: default;
@@ -350,9 +350,9 @@
 
 .ch-info-wrap{
     position: absolute;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
+    width: 130px;
+    height: 30px;
+    border-radius: 5%;
 
     -webkit-perspective: 800px;
     -moz-perspective: 800px;
@@ -366,20 +366,22 @@
     -ms-transition: all 0.4s ease-in-out;
     transition: all 0.4s ease-in-out;
 
-    top: 5px;
-    left: 5px;
-    background: #f9f9f9 url(/images/bg.jpg);
-    box-shadow:
-    0 0 0 10px rgba(255,255,255,0.2),
-    inset 0 0 3px rgba(115,114, 23, 0.8);
+    top: 0px;
+    left: 0px;
+    bottom: 1px;
+    right: 1px;
+    background: #f9f9f9 url(/images/modern_bg2.jpg);
+    //box-shadow:
+    //0 0 0 10px rgba(255,255,255,0.2),
+    //inset 0 0 3px rgba(115,114, 23, 0.8);
 
 }
 
 .ch-info{
     position: absolute;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
+    width: 129px;
+    height: 29px;
+    border-radius: 5%;
 
     -webkit-transition: all 0.4s ease-in-out;
     -moz-transition: all 0.4s ease-in-out;
@@ -400,7 +402,7 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
+    border-radius: 5%;
     background-position: center center;
 
     -webkit-backface-visibility: hidden;
@@ -421,31 +423,38 @@
 }
 
 .ch-img-0 {
-    background-image: url(/images/home_icon.jpg);
+    //background-image: url(/images/modern_bg1.jpg);
+    background: #4D6E86;
 }
 
 .ch-img-1 {
-    background-image: url(/images/archive_icon.png);
+    //background-image: url(/images/archive_icon.png);
+    background: #4D6E86;
 }
 
 .ch-img-2 {
-    background-image: url(/images/categories_icon.png);
+    //background-image: url(/images/categories_icon.png);
+    background: #4D6E86;
 }
 
 .ch-img-3 {
-    background-image: url(/images/12.jpg);
+    //background-image: url(/images/12.jpg);
+    background: #4D6E86;
 }
 
 .ch-img-4 {
-    background-image: url(/images/tags_icon.png);
+    //background-image: url(/images/tags_icon.png);
+    background: #4D6E86;
 }
 
 .ch-img-5 {
-    background-image: url(/images/6.png);
+    //background-image: url(/images/6.png);
+    background: #4D6E86;
 }
 
 .ch-img-6 {
-    background-image: url(/images/viz.png);
+    //background-image: url(/images/viz.png);
+    background: #4D6E86;
 }
 
 .ch-info h3 {
@@ -453,9 +462,9 @@
     text-transform: uppercase;
     letter-spacing: 2px;
     font-size: 14px;
-    margin: 0 15px;
-    padding: 40px 0 0 0;
-    height: 90px;
+    margin: 0 5px;
+    padding: 7px 0 0 0;
+    height: 20px;
     font-family: 'Open Sans', Arial, sans-serif;
     text-shadow:
     0 0 1px #fff,
@@ -467,9 +476,9 @@
     text-transform: uppercase;
     letter-spacing: 2px;
     font-size: 14px;
-    margin: 0 15px;
-    padding: 40px 0 0 0;
-    height: 90px;
+    margin: 0 5px;
+    padding: 7px 0 0 0;
+    height: 20px;
     font-family: 'Open Sans', Arial, sans-serif;
     text-shadow:
     0 0 1px #000,
@@ -478,11 +487,12 @@
 
 .ch-info p {
     color: #fff;
-    padding: 10px 5px;
+    //padding: 10px 5px;
     font-style: italic;
-    margin: 0 30px;
+    margin: 0 15px;
     font-size: 12px;
     border-top: 1px solid rgba(255,255,255,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.5);
 }
 
 .ch-info p a {
@@ -494,7 +504,7 @@
     text-transform: uppercase;
     font-size: 9px;
     letter-spacing: 1px;
-    padding-top: 4px;
+    padding-top: 5px;
     font-family: 'Open Sans', Arial, sans-serif;
 }
 
